@@ -92,7 +92,7 @@ async function start() {
       next();
     });
     console.log('[Server] Serving frontend build from /dist');
-  } else {
+  } else if (!isProduction) {
     try {
       const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
@@ -116,12 +116,10 @@ async function start() {
       });
       console.log('[Server] Vite middleware attached for frontend');
     } catch (err) {
-      if (isProduction) {
-        console.error('[Server] Frontend build is missing (/dist/index.html). Run `npm run build` during deploy.');
-      } else {
-        console.error('[Server] Failed to initialize Vite middleware:', err);
-      }
+      console.error('[Server] Failed to initialize Vite middleware:', err);
     }
+  } else {
+    console.error('[Server] Frontend build is missing (/dist/index.html). Run `npm run build` during deploy.');
   }
 
   const server = http.createServer(app);
