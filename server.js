@@ -102,6 +102,12 @@ async function start() {
         next();
       });
       console.log('[Server] Serving production frontend build from /dist');
+    } else {
+      console.error('[Server] ERROR: /dist not found. Run "npm run build" before starting in production.');
+      // Serve a helpful error so the root request doesn't silently 404
+      app.get('/', (req, res) => {
+        res.status(503).send('Frontend build not found. Run "npm run build" first.');
+      });
     }
   }
 
