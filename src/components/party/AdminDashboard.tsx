@@ -118,6 +118,8 @@ const AdminDashboard: React.FC = () => {
   const [newUserConstituency, setNewUserConstituency] = useState('');
   const [showUserPassword, setShowUserPassword] = useState(false);
   const [userSuccessMsg, setUserSuccessMsg] = useState('');
+  const [allowUserRegistration, setAllowUserRegistration] = useState(true);
+  const [updatingRegistrationSetting, setUpdatingRegistrationSetting] = useState(false);
 
   const [groupName, setGroupName] = useState('');
   const [groupPublic, setGroupPublic] = useState(true);
@@ -327,8 +329,15 @@ const AdminDashboard: React.FC = () => {
       }
 
       if (tabId === 'users') {
-        const res = await api.authedRequest<{ ok: true; items: any[] }>('/api/users?limit=50', 'GET');
-        setUsers(res.items || []);
+        const [usersRes, settingsRes] = await Promise.all([
+          api.authedRequest<{ ok: true; items: any[] }>('/api/users?limit=50', 'GET'),
+          api.authedRequest<{ ok: true; settings?: { allowUserRegistration?: boolean } }>(
+            '/api/users/settings/registration',
+            'GET'
+          ),
+        ]);
+        setUsers(usersRes.items || []);
+        setAllowUserRegistration(settingsRes?.settings?.allowUserRegistration !== false);
       }
 
       if (tabId === 'leaders') {
@@ -1025,6 +1034,25 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleToggleUserRegistration = async () => {
+    setError('');
+    setUpdatingRegistrationSetting(true);
+    try {
+      const res = await api.authedRequest<{ ok: true; settings?: { allowUserRegistration?: boolean } }>(
+        '/api/users/settings/registration',
+        'PATCH',
+        { allowUserRegistration: !allowUserRegistration }
+      );
+      const next = res?.settings?.allowUserRegistration !== false;
+      setAllowUserRegistration(next);
+      setUserSuccessMsg(next ? 'User registration is now ON.' : 'User registration is now OFF.');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to update registration setting');
+    } finally {
+      setUpdatingRegistrationSetting(false);
+    }
+  };
+
   const handleCreateGroup = async () => {
     setError('');
     if (!groupName) {
@@ -1479,6 +1507,40 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
+      <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-gray-900">Manual Registration</h4>
+            <p className="text-xs text-gray-500">
+              Turn OFF to hide signup/register for normal users and allow only login/Google sign-in.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={updatingRegistrationSetting}
+            onClick={handleToggleUserRegistration}
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50 ${
+              allowUserRegistration
+                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+            }`}
+          >
+            <span
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                allowUserRegistration ? 'bg-green-600' : 'bg-gray-400'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  allowUserRegistration ? 'translate-x-4' : 'translate-x-1'
+                }`}
+              />
+            </span>
+            {allowUserRegistration ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </div>
+
       {/* Add User Form */}
       <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm mb-6">
         <div className="flex items-center gap-2 mb-3">
@@ -1593,7 +1655,7 @@ const AdminDashboard: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                {['User', 'Email & Phone', 'Role', 'District', 'Status', 'Joined', 'Actions'].map((h) => (
+                {['User', 'Email & Phone', 'Role', 'Verification', 'District', 'Status', 'Joined', 'Actions'].map((h) => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -1620,6 +1682,15 @@ const AdminDashboard: React.FC = () => {
                       }`}
                     >
                       {u.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        u.isVerified ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {u.isVerified ? 'Verified' : 'Not Verified'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-600">

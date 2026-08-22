@@ -40,6 +40,8 @@ const UserSchema = new mongoose.Schema(
 
     authProvider: { type: String, enum: ['google', 'local'], default: 'google' },
     googleId: { type: String, index: true },
+    isVerified: { type: Boolean, default: false, index: true },
+    createdByAdmin: { type: Boolean, default: false, index: true },
 
     passwordHash: { type: String, select: false },
 
@@ -73,6 +75,8 @@ UserSchema.statics.createAdmin = async function ({ name, email, password }) {
     role: 'admin',
     status: 'active',
     authProvider: 'local',
+    isVerified: true,
+    createdByAdmin: true,
     passwordHash,
   });
 };

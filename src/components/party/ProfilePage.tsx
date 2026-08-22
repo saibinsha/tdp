@@ -17,6 +17,8 @@ const ProfilePage: React.FC = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editData, setEditData] = useState({
+    name: user?.name || '',
+    phone: user?.phone || '',
     district: user?.district || '',
     constituency: user?.constituency || '',
     address: user?.address || '',
@@ -25,6 +27,8 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setEditData({
+        name: user.name || '',
+        phone: user.phone || '',
         district: user.district || '',
         constituency: user.constituency || '',
         address: user.address || '',
@@ -52,6 +56,8 @@ const ProfilePage: React.FC = () => {
 
   const memberSince = user.joinedDate ? new Date(user.joinedDate) : null;
   const memberSinceText = memberSince ? memberSince.toLocaleDateString() : 'N/A';
+  const canEditIdentity = !user.createdByAdmin;
+  const verificationText = user.isVerified ? 'Verified Member' : 'Not Verified';
 
   const handleSave = async () => {
     setSaveError('');
@@ -59,6 +65,7 @@ const ProfilePage: React.FC = () => {
     setSaving(true);
     try {
       await updateProfile({
+        ...(canEditIdentity ? { name: editData.name.trim(), phone: editData.phone.trim() } : {}),
         district: editData.district.trim(),
         constituency: editData.constituency.trim(),
         address: editData.address.trim(),
@@ -165,28 +172,34 @@ const ProfilePage: React.FC = () => {
           <h3 className="text-lg font-bold text-gray-900">Personal Information</h3>
           {editing && (
             <span className="text-xs font-semibold px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg flex items-center gap-1">
-              <Lock className="w-3 h-3 text-amber-600" /> Name, Email & Phone are permanent registered fields
+              <Lock className="w-3 h-3 text-amber-600" /> {canEditIdentity ? 'Email remains locked' : 'Name, Email & Phone are locked for admin-created accounts'}
             </span>
           )}
         </div>
 
         {editing ? (
           <div className="space-y-5">
-            {/* Non-editable Registered Fields */}
+            {/* Identity Fields */}
             <div className="p-4 bg-gray-50/80 rounded-xl border border-gray-200/80">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5 text-gray-500" />
-                Verified Identification (Cannot be changed)
+                Identity Information
               </p>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1 flex items-center justify-between">
-                    <span>Full Name</span>
-                    <Lock className="w-3 h-3 text-gray-400" />
-                  </label>
-                  <div className="w-full px-3.5 py-2.5 bg-gray-100/90 border border-gray-200 rounded-lg text-sm text-gray-700 font-medium cursor-not-allowed select-none">
-                    {user.name}
-                  </div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Full Name</label>
+                  {canEditIdentity ? (
+                    <input
+                      type="text"
+                      value={editData.name}
+                      onChange={(e) => setEditData((p) => ({ ...p, name: e.target.value }))}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                    />
+                  ) : (
+                    <div className="w-full px-3.5 py-2.5 bg-gray-100/90 border border-gray-200 rounded-lg text-sm text-gray-700 font-medium cursor-not-allowed select-none">
+                      {user.name}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -200,13 +213,20 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1 flex items-center justify-between">
-                    <span>Phone Number</span>
-                    <Lock className="w-3 h-3 text-gray-400" />
-                  </label>
-                  <div className="w-full px-3.5 py-2.5 bg-gray-100/90 border border-gray-200 rounded-lg text-sm text-gray-700 font-medium cursor-not-allowed select-none">
-                    {user.phone || 'Not provided'}
-                  </div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Phone Number</label>
+                  {canEditIdentity ? (
+                    <input
+                      type="text"
+                      value={editData.phone}
+                      onChange={(e) => setEditData((p) => ({ ...p, phone: e.target.value }))}
+                      placeholder="Enter phone number"
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                    />
+                  ) : (
+                    <div className="w-full px-3.5 py-2.5 bg-gray-100/90 border border-gray-200 rounded-lg text-sm text-gray-700 font-medium cursor-not-allowed select-none">
+                      {user.phone || 'Not provided'}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -304,7 +324,7 @@ const ProfilePage: React.FC = () => {
               { icon: MapPin, label: 'Address', value: user.address || 'Not set' },
               { icon: Calendar, label: 'Member Since', value: user.joinedDate || 'N/A' },
               { icon: Shield, label: 'Role', value: user.role.charAt(0).toUpperCase() + user.role.slice(1) },
-              { icon: Shield, label: 'Verification', value: 'Verified Member' },
+              { icon: Shield, label: 'Verification', value: verificationText },
             ].map((item, i) => {
               const Icon = item.icon;
               return (
@@ -402,7 +422,9 @@ const ProfilePage: React.FC = () => {
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-gray-400">Verification</p>
-                <p className="text-xs font-bold text-green-700">Verified</p>
+                <p className={`text-xs font-bold ${user.isVerified ? 'text-green-700' : 'text-amber-700'}`}>
+                  {user.isVerified ? 'Verified' : 'Not Verified'}
+                </p>
               </div>
             </div>
           </div>

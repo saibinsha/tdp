@@ -16,6 +16,9 @@ interface User {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  authProvider?: 'google' | 'local';
+  isVerified?: boolean;
+  createdByAdmin?: boolean;
   avatar?: string;
   profilePicture?: string;
   phone?: string;
@@ -461,6 +464,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           constituency: backendUser.constituency || '',
           address: backendUser.address || '',
           joinedDate: backendUser.createdAt || new Date().toISOString(),
+          authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
+          isVerified: Boolean(backendUser.isVerified),
+          createdByAdmin: Boolean(backendUser.createdByAdmin),
         };
         setUser(normalized);
         localStorage.setItem('tdp_user', JSON.stringify(normalized));
@@ -526,6 +532,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         constituency: backendUser.constituency || '',
         address: backendUser.address || '',
         joinedDate: backendUser.createdAt || new Date().toISOString(),
+        authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
+        isVerified: Boolean(backendUser.isVerified),
+        createdByAdmin: Boolean(backendUser.createdByAdmin),
       };
       setUser(normalized);
       localStorage.setItem('tdp_user', JSON.stringify(normalized));
@@ -558,6 +567,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       constituency: backendUser.constituency || '',
       address: backendUser.address || '',
       joinedDate: backendUser.createdAt || new Date().toISOString(),
+      authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
+      isVerified: Boolean(backendUser.isVerified),
+      createdByAdmin: Boolean(backendUser.createdByAdmin),
     };
 
     setUser(normalized);
@@ -596,6 +608,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       constituency: backendUser.constituency || '',
       address: backendUser.address || '',
       joinedDate: backendUser.createdAt || new Date().toISOString(),
+      authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
+      isVerified: Boolean(backendUser.isVerified),
+      createdByAdmin: Boolean(backendUser.createdByAdmin),
     };
 
     setUser(normalized);
@@ -634,6 +649,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       constituency: backendUser.constituency || '',
       address: backendUser.address || '',
       joinedDate: backendUser.createdAt || new Date().toISOString(),
+      authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
+      isVerified: Boolean(backendUser.isVerified),
+      createdByAdmin: Boolean(backendUser.createdByAdmin),
     };
 
     setUser(normalized);

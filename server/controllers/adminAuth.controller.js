@@ -39,6 +39,9 @@ const adminLogin = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
       status: user.status,
+      authProvider: user.authProvider,
+      isVerified: Boolean(user.isVerified),
+      createdByAdmin: Boolean(user.createdByAdmin),
     },
     tokens: { accessToken, refreshToken },
   });

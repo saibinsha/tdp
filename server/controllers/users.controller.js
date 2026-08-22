@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { AppError } = require('../utils/AppError');
 const User = require('../models/User');
+const { getAppSettings, setAllowUserRegistration } = require('../utils/appSettings');
 
 const getMe = asyncHandler(async (req, res) => {
   res.json({
@@ -12,9 +13,23 @@ const getMe = asyncHandler(async (req, res) => {
 
 const updateMe = asyncHandler(async (req, res) => {
   const allowed = ['district', 'constituency', 'address', 'profilePicture', 'digitalId'];
+  if (!req.user.createdByAdmin) {
+    allowed.push('name', 'phone');
+  }
+
   const patch = {};
   for (const k of allowed) {
     if (req.body[k] !== undefined) patch[k] = req.body[k];
+  }
+
+  if (patch.name !== undefined) {
+    const name = String(patch.name || '').trim();
+    if (!name) throw new AppError('Name is required', 400);
+    patch.name = name;
+  }
+
+  if (patch.phone !== undefined) {
+    patch.phone = String(patch.phone || '').trim();
   }
 
   const user = await User.findByIdAndUpdate(req.user._id, patch, { new: true }).select('-passwordHash -refreshTokenHash');
@@ -45,6 +60,8 @@ const adminCreateUser = asyncHandler(async (req, res) => {
     role: role === 'admin' ? 'admin' : 'user',
     status: 'active',
     authProvider,
+    isVerified: true,
+    createdByAdmin: true,
     passwordHash,
   });
 
@@ -137,6 +154,29 @@ const directory = asyncHandler(async (req, res) => {
   res.json({ ok: true, page: p, limit: l, total, items });
 });
 
+const getRegistrationSettings = asyncHandler(async (_req, res) => {
+  const settings = await getAppSettings();
+  res.json({
+    ok: true,
+    settings: {
+      allowUserRegistration: settings ? settings.allowUserRegistration !== false : true,
+    },
+  });
+});
+
+const updateRegistrationSettings = asyncHandler(async (req, res) => {
+  if (typeof req.body?.allowUserRegistration !== 'boolean') {
+    throw new AppError('allowUserRegistration must be a boolean', 400);
+  }
+  const settings = await setAllowUserRegistration(req.body.allowUserRegistration);
+  res.json({
+    ok: true,
+    settings: {
+      allowUserRegistration: settings.allowUserRegistration !== false,
+    },
+  });
+});
+
 module.exports = {
   getMe,
   updateMe,
@@ -146,4 +186,6 @@ module.exports = {
   listUsers,
   getUserById,
   directory,
+  getRegistrationSettings,
+  updateRegistrationSettings,
 };

@@ -25,6 +25,8 @@ async function ensureSeedDemoUsers() {
       role: 'admin',
       status: 'active',
       authProvider: 'local',
+      isVerified: true,
+      createdByAdmin: true,
       passwordHash,
     });
   }
@@ -39,6 +41,8 @@ async function ensureSeedDemoUsers() {
       role: 'user',
       status: 'active',
       authProvider: 'local',
+      isVerified: false,
+      createdByAdmin: false,
       passwordHash,
     });
   }

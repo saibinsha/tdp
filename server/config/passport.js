@@ -32,6 +32,8 @@ function initPassport(app) {
                 profilePicture: (profile?.photos && profile.photos[0] && profile.photos[0].value) || '',
                 authProvider: 'google',
                 googleId: profile?.id || '',
+                isVerified: true,
+                createdByAdmin: false,
                 role: 'user',
                 status: 'active',
               });
@@ -41,6 +43,8 @@ function initPassport(app) {
                 user.profilePicture = profile.photos[0].value;
               }
               if (user.status === 'blocked') return done(null, false);
+              if (user.authProvider !== 'google') user.authProvider = 'google';
+              if (!user.isVerified) user.isVerified = true;
               await user.save();
             }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { X, Mail, Lock, Eye, EyeOff, Shield, User } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -13,6 +13,25 @@ const LoginModal: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [allowUserRegistration, setAllowUserRegistration] = useState(true);
+
+  useEffect(() => {
+    if (!showLoginModal || loginMode !== 'user') return;
+    let cancelled = false;
+    api.request<{ ok: true; settings?: { allowUserRegistration?: boolean } }>('/api/auth/settings', 'GET')
+      .then((res) => {
+        if (cancelled) return;
+        const allow = res?.settings?.allowUserRegistration !== false;
+        setAllowUserRegistration(allow);
+        if (!allow) setAuthView('login');
+      })
+      .catch(() => {
+        if (!cancelled) setAllowUserRegistration(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showLoginModal, loginMode]);
 
   if (!showLoginModal) return null;
 
@@ -27,6 +46,10 @@ const LoginModal: React.FC = () => {
       }
     } else {
       if (authView === 'register') {
+        if (!allowUserRegistration) {
+          setError('Registration is currently disabled by admin');
+          return;
+        }
         if (!name || !email || !password || !confirmPassword) {
           setError('Please fill in all fields');
           return;
@@ -160,7 +183,7 @@ const LoginModal: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {loginMode === 'user' && authView === 'register' && (
+            {loginMode === 'user' && authView === 'register' && allowUserRegistration && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Name</label>
                 <div className="relative">
@@ -213,7 +236,7 @@ const LoginModal: React.FC = () => {
               </div>
             </div>
 
-            {loginMode === 'user' && authView === 'register' && (
+            {loginMode === 'user' && authView === 'register' && allowUserRegistration && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
                 <div className="relative">
@@ -254,12 +277,18 @@ const LoginModal: React.FC = () => {
                   Processing...
                 </span>
               ) : (
-                loginMode === 'admin' ? 'Admin Sign In' : authView === 'register' ? 'Register' : 'Sign In'
+                loginMode === 'admin' ? 'Admin Sign In' : authView === 'register' && allowUserRegistration ? 'Register' : 'Sign In'
               )}
             </button>
           </form>
 
-          {loginMode === 'user' && (
+          {loginMode === 'user' && !allowUserRegistration && (
+            <p className="mt-4 text-xs text-center text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              New user registration is currently turned off by admin.
+            </p>
+          )}
+
+          {loginMode === 'user' && allowUserRegistration && (
             <div className="mt-5 text-center">
               <button
                 type="button"

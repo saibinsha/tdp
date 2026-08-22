@@ -10,6 +10,8 @@ const {
   adminSetStatus,
   listUsers,
   getUserById,
+  getRegistrationSettings,
+  updateRegistrationSettings,
 } = require('../controllers/users.controller');
 
 const router = express.Router();
@@ -18,6 +20,8 @@ router.get('/me', requireAuth, getMe);
 router.patch('/me', requireAuth, updateMe);
 
 router.get('/directory', requireAuth, directory);
+router.get('/settings/registration', requireAuth, requireRole('admin'), getRegistrationSettings);
+router.patch('/settings/registration', requireAuth, requireRole('admin'), updateRegistrationSettings);
 
 router.get('/', requireAuth, requireRole('admin'), listUsers);
 router.get('/:id', requireAuth, requireRole('admin'), getUserById);

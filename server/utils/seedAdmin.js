@@ -47,6 +47,8 @@ async function ensureSeedAdmin() {
         existing.status = 'active';
         existing.passwordHash = passwordHash;
         existing.authProvider = 'local';
+        existing.isVerified = true;
+        existing.createdByAdmin = true;
         if (!existing.name || existing.name === 'User') existing.name = s.name;
         await existing.save();
         console.log(`[SeedAdmin] Updated admin credentials for: ${s.email}`);
@@ -58,4 +60,3 @@ async function ensureSeedAdmin() {
 }
 
 module.exports = { ensureSeedAdmin };
-

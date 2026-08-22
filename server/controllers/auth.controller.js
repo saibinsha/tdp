@@ -6,6 +6,7 @@ const { AppError } = require('../utils/AppError');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
+const { getAppSettings } = require('../utils/appSettings');
 
 const googleOAuthClient = new OAuth2Client();
 
@@ -114,6 +115,8 @@ const googleNative = asyncHandler(async (req, res) => {
       profilePicture: picture,
       authProvider: 'google',
       googleId: googleId || undefined,
+      isVerified: true,
+      createdByAdmin: false,
       role: 'user',
       status: 'active',
     });
@@ -123,6 +126,7 @@ const googleNative = asyncHandler(async (req, res) => {
     if (!user.googleId && googleId) user.googleId = googleId;
     if (!user.profilePicture && picture) user.profilePicture = picture;
     if (user.authProvider !== 'google') user.authProvider = 'google';
+    if (!user.isVerified) user.isVerified = true;
     await user.save();
   }
 
@@ -140,6 +144,9 @@ const googleNative = asyncHandler(async (req, res) => {
       profilePicture: user.profilePicture,
       role: user.role,
       status: user.status,
+      authProvider: user.authProvider,
+      isVerified: Boolean(user.isVerified),
+      createdByAdmin: Boolean(user.createdByAdmin),
     },
     tokens: { accessToken, refreshToken },
   });
@@ -181,6 +188,9 @@ const googleCallback = (req, res, next) => {
           profilePicture: user.profilePicture,
           role: user.role,
           status: user.status,
+          authProvider: user.authProvider,
+          isVerified: Boolean(user.isVerified),
+          createdByAdmin: Boolean(user.createdByAdmin),
         },
         tokens: { accessToken, refreshToken },
       };
@@ -214,6 +224,11 @@ const googleCallback = (req, res, next) => {
 };
 
 const registerLocal = asyncHandler(async (req, res) => {
+  const settings = await getAppSettings();
+  if (settings && settings.allowUserRegistration === false) {
+    throw new AppError('User registration is currently disabled', 403);
+  }
+
   const { name, email, password } = req.body;
   if (!name || !email || !password) throw new AppError('Name, email and password are required', 400);
   if (String(password).length < 6) throw new AppError('Password must be at least 6 characters', 400);
@@ -230,6 +245,8 @@ const registerLocal = asyncHandler(async (req, res) => {
     role: 'user',
     status: 'active',
     authProvider: 'local',
+    isVerified: false,
+    createdByAdmin: false,
     passwordHash,
   });
 
@@ -247,6 +264,9 @@ const registerLocal = asyncHandler(async (req, res) => {
       profilePicture: user.profilePicture,
       role: user.role,
       status: user.status,
+      authProvider: user.authProvider,
+      isVerified: Boolean(user.isVerified),
+      createdByAdmin: Boolean(user.createdByAdmin),
     },
     tokens: { accessToken, refreshToken },
   });
@@ -278,8 +298,21 @@ const loginLocal = asyncHandler(async (req, res) => {
       profilePicture: user.profilePicture,
       role: user.role,
       status: user.status,
+      authProvider: user.authProvider,
+      isVerified: Boolean(user.isVerified),
+      createdByAdmin: Boolean(user.createdByAdmin),
     },
     tokens: { accessToken, refreshToken },
+  });
+});
+
+const getAuthSettings = asyncHandler(async (req, res) => {
+  const settings = await getAppSettings();
+  res.json({
+    ok: true,
+    settings: {
+      allowUserRegistration: settings ? settings.allowUserRegistration !== false : true,
+    },
   });
 });
 
@@ -327,6 +360,7 @@ module.exports = {
   googleNative,
   registerLocal,
   loginLocal,
+  getAuthSettings,
   refresh,
   logout,
 };
