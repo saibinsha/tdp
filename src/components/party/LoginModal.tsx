@@ -31,7 +31,7 @@ const LoginModal: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [showLoginModal, loginMode]);
+  }, [showLoginModal, loginMode, setAuthView]);
 
   if (!showLoginModal) return null;
 
