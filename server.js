@@ -120,6 +120,12 @@ async function start() {
     }
   } else {
     console.error('[Server] Frontend build is missing (/dist/index.html). Run `npm run build` during deploy.');
+    app.use((req, res, next) => {
+      if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+        return res.status(503).type('text/plain').send('Frontend build is not available. Please run `npm run build` during deploy.');
+      }
+      next();
+    });
   }
 
   const server = http.createServer(app);
