@@ -262,13 +262,21 @@ const MessagesPage: React.FC = () => {
 
   const startRecordingIfPossible = () => {
     if (recRecorderRef.current) return;
-    if (!callId) return;
+    // Use ref so this works even when called from stale closures (e.g. onconnectionstatechange)
+    const capturedCallId = callIdRef.current;
+    if (!capturedCallId) return;
 
     const local = localStreamRef.current;
     const remote = remoteStreamRef.current;
     const localTracks = local?.getAudioTracks?.() || [];
     const remoteTracks = remote?.getAudioTracks?.() || [];
     if (localTracks.length === 0 && remoteTracks.length === 0) return;
+
+    // Capture all metadata needed for the upload at the moment recording starts,
+    // so the onstop handler doesn't depend on stale React state.
+    const capturedCallOther = callOtherRef.current;
+    const capturedCallKind = callKindRef.current;
+    const capturedUserId = (user as any)?.id || (user as any)?._id;
 
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -316,9 +324,10 @@ const MessagesPage: React.FC = () => {
 
         if (!chunks.length) return;
         if (recUploadingRef.current) return;
-        if (!callId) return;
-        if (!user?.id) return;
-        if (!callOther?._id) return;
+        // Use values captured at recording-start time (not stale state from closure)
+        if (!capturedCallId) return;
+        if (!capturedUserId) return;
+        if (!capturedCallOther?._id) return;
 
         recUploadingRef.current = true;
         try {
@@ -328,13 +337,13 @@ const MessagesPage: React.FC = () => {
 
           await api.uploadCallRecording({
             file: blob,
-            filename: `call-${callId}.webm`,
+            filename: `call-${capturedCallId}.webm`,
             mimeType: 'audio/webm',
-            callId,
+            callId: capturedCallId,
             scope: 'private',
-            kind: callKind,
-            fromUserId: String(user?.id || user?._id || ''),
-            toUserId: String(callOther?._id || callOther?.id || ''),
+            kind: capturedCallKind,
+            fromUserId: String(capturedUserId || ''),
+            toUserId: String(capturedCallOther?._id || ''),
             startedAt: startedAt ? new Date(startedAt).toISOString() : undefined,
             endedAt: new Date(endedAt).toISOString(),
             durationSec,
@@ -1146,7 +1155,14 @@ const MessagesPage: React.FC = () => {
       s.off('call:ice', onIce);
       s.off('call:hangup', onHangup);
     };
-  }, [isAuthenticated, user?.id, activeUserId, callId, iceServers]);
+  // NOTE: callId and iceServers are intentionally excluded from deps.
+  // Including callId caused socket listeners to be removed and re-added every time a call
+  // started (state update), creating a race window where call:accepted could be missed —
+  // the root cause of "first call blank, second call works". All call-state reads inside
+  // the handlers use refs (callIdRef, callOtherRef, etc.) so stale closure is not an issue.
+  // iceServers is memoized with [] deps and never changes, so excluding it is safe.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.id, activeUserId]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
