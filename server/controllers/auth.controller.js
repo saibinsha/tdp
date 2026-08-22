@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { passport } = require('../config/passport');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { AppError } = require('../utils/AppError');
@@ -7,6 +8,61 @@ const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
 
 const googleOAuthClient = new OAuth2Client();
+
+function getStateSecret() {
+  const secret = process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT secret is not configured');
+  return secret;
+}
+
+function buildSignedState(data) {
+  const payload = Buffer.from(JSON.stringify(data)).toString('base64url');
+  const sig = crypto.createHmac('sha256', getStateSecret()).update(payload).digest('base64url');
+  return `${payload}.${sig}`;
+}
+
+function parseSignedState(raw) {
+  const parts = String(raw || '').split('.');
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts;
+  const expected = crypto.createHmac('sha256', getStateSecret()).update(payload).digest('base64url');
+  const sigBuf = Buffer.from(sig);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length) return null;
+  if (!crypto.timingSafeEqual(sigBuf, expBuf)) return null;
+  try {
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  } catch (_) {
+    return null;
+  }
+}
+
+function getAllowedOrigins() {
+  const origins = new Set();
+  const addOrigin = (val) => {
+    if (!val) return;
+    String(val).split(',').forEach((o) => {
+      try { origins.add(new URL(o.trim()).origin); } catch (_) {}
+    });
+  };
+  addOrigin(process.env.FRONTEND_URL);
+  addOrigin(process.env.PUBLIC_FRONTEND_URL);
+  addOrigin(process.env.FULL_FRONTEND_URL);
+  addOrigin(process.env.CORS_ORIGINS);
+  return origins;
+}
+
+function isTrustedOrigin(origin) {
+  if (!origin) return false;
+  const allowed = getAllowedOrigins();
+  // If no origins are configured, reject user-supplied origins for safety
+  if (allowed.size === 0) return false;
+  try {
+    return allowed.has(new URL(origin).origin);
+  } catch (_) {
+    return false;
+  }
+}
 
 function issueTokens(user) {
   const accessToken = signAccessToken({ sub: String(user._id), role: user.role });
@@ -96,7 +152,11 @@ async function setRefreshToken(userId, refreshToken) {
 
 const googleStart = (req, res, next) => {
   const frontendOrigin = req.query.frontend ? String(req.query.frontend) : '';
-  const state = frontendOrigin ? Buffer.from(JSON.stringify({ frontend: frontendOrigin })).toString('base64') : undefined;
+  const stateData = { nonce: crypto.randomBytes(16).toString('hex') };
+  if (frontendOrigin && isTrustedOrigin(frontendOrigin)) {
+    stateData.frontend = frontendOrigin;
+  }
+  const state = buildSignedState(stateData);
   passport.authenticate('google', { scope: ['profile', 'email'], session: false, state })(req, res, next);
 };
 
@@ -125,23 +185,16 @@ const googleCallback = (req, res, next) => {
         tokens: { accessToken, refreshToken },
       };
 
-      // Determine frontend base: prefer state-encoded origin, then env vars
+      // Determine frontend base: prefer validated state-encoded origin, then env vars
       let frontendBase =
         process.env.FRONTEND_URL ||
         process.env.PUBLIC_FRONTEND_URL ||
         process.env.FULL_FRONTEND_URL ||
         '';
 
-      try {
-        const rawState = req.query.state ? String(req.query.state) : '';
-        if (rawState) {
-          const decoded = JSON.parse(Buffer.from(rawState, 'base64').toString('utf8'));
-          if (decoded && decoded.frontend) {
-            frontendBase = String(decoded.frontend);
-          }
-        }
-      } catch (_) {
-        // ignore malformed state
+      const stateData = parseSignedState(req.query.state);
+      if (stateData && stateData.frontend && isTrustedOrigin(stateData.frontend)) {
+        frontendBase = String(stateData.frontend);
       }
 
       if (frontendBase) {
