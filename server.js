@@ -27,7 +27,7 @@ const { initSockets } = require('./server/sockets');
 const { ensureSeedAdmin } = require('./server/utils/seedAdmin');
 const { ensureSeedDemoUsers } = require('./server/utils/seedDemoUsers');
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 const DEFAULT_MONGODB_URI = 'mongodb+srv://madhu:667788@annadatha.raljj9h.mongodb.net/?appName=annadatha';
 
@@ -79,29 +79,48 @@ async function start() {
   try { initPassport(app); } catch (e) { console.warn('[Server] Passport init skipped'); }
 
   // Set up frontend serving on the SAME server & port
-  if (!isProduction) {
+  const distPath = path.join(process.cwd(), 'dist');
+  const distIndexPath = path.join(distPath, 'index.html');
+  const hasProductionBuild = fs.existsSync(distIndexPath);
+
+  if (hasProductionBuild) {
+    app.use(express.static(distPath));
+    app.use((req, res, next) => {
+      if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+        return res.sendFile(distIndexPath);
+      }
+      next();
+    });
+    console.log('[Server] Serving frontend build from /dist');
+  } else {
     try {
       const { createServer: createViteServer } = await import('vite');
       const vite = await createViteServer({
         server: { middlewareMode: true },
-        appType: 'spa',
+        appType: 'custom',
       });
       app.use(vite.middlewares);
-      console.log('[Server] Vite dev middleware attached for frontend');
-    } catch (err) {
-      console.error('[Server] Failed to initialize Vite middleware:', err);
-    }
-  } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    if (fs.existsSync(distPath)) {
-      app.use(express.static(distPath));
-      app.use((req, res, next) => {
-        if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
-          return res.sendFile(path.join(distPath, 'index.html'));
+      app.use('*', async (req, res, next) => {
+        if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+          return next();
         }
-        next();
+        try {
+          const htmlTemplatePath = path.join(process.cwd(), 'index.html');
+          let template = await fs.promises.readFile(htmlTemplatePath, 'utf-8');
+          template = await vite.transformIndexHtml(req.originalUrl, template);
+          res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+        } catch (error) {
+          vite.ssrFixStacktrace(error);
+          next(error);
+        }
       });
-      console.log('[Server] Serving production frontend build from /dist');
+      console.log('[Server] Vite middleware attached for frontend');
+    } catch (err) {
+      if (isProduction) {
+        console.error('[Server] Frontend build is missing (/dist/index.html). Run `npm run build` during deploy.');
+      } else {
+        console.error('[Server] Failed to initialize Vite middleware:', err);
+      }
     }
   }
 
