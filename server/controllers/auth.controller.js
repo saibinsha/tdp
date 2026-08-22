@@ -198,8 +198,11 @@ const googleCallback = (req, res, next) => {
       }
 
       if (frontendBase) {
+        const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64');
         const redirectUrl = new URL('/auth/google', String(frontendBase));
-        redirectUrl.searchParams.set('payload', Buffer.from(JSON.stringify(payload)).toString('base64'));
+        // Use hash fragment so the payload is never sent to any server and
+        // survives all SPA rewrite rules (Netlify, Render, etc.) unchanged.
+        redirectUrl.hash = `payload=${payloadB64}`;
         return res.redirect(302, redirectUrl.toString());
       }
 

@@ -8,7 +8,17 @@ export default function GoogleAuthCallback() {
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    const payloadB64 = sp.get('payload');
+    // The server embeds the payload in the URL hash fragment (#payload=…) so
+    // that SPA hosting rewrites (Netlify, Render, etc.) cannot strip it.
+    // Fall back to the query-string for older redirects.
+    let payloadB64: string | null = null;
+    const hash = window.location.hash; // e.g. "#payload=eyJ..."
+    if (hash.startsWith('#payload=')) {
+      payloadB64 = hash.slice('#payload='.length);
+    } else {
+      payloadB64 = sp.get('payload');
+    }
+
     if (!payloadB64) {
       setError('Missing payload');
       return;
