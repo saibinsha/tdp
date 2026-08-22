@@ -94,7 +94,11 @@ async function setRefreshToken(userId, refreshToken) {
   await User.findByIdAndUpdate(userId, { refreshTokenHash });
 }
 
-const googleStart = passport.authenticate('google', { scope: ['profile', 'email'], session: false });
+const googleStart = (req, res, next) => {
+  const frontendOrigin = req.query.frontend ? String(req.query.frontend) : '';
+  const state = frontendOrigin ? Buffer.from(JSON.stringify({ frontend: frontendOrigin })).toString('base64') : undefined;
+  passport.authenticate('google', { scope: ['profile', 'email'], session: false, state })(req, res, next);
+};
 
 const googleCallback = (req, res, next) => {
   passport.authenticate('google', { session: false }, async (err, user) => {
@@ -121,10 +125,24 @@ const googleCallback = (req, res, next) => {
         tokens: { accessToken, refreshToken },
       };
 
-      const frontendBase =
+      // Determine frontend base: prefer state-encoded origin, then env vars
+      let frontendBase =
         process.env.FRONTEND_URL ||
         process.env.PUBLIC_FRONTEND_URL ||
-        process.env.FULL_FRONTEND_URL;
+        process.env.FULL_FRONTEND_URL ||
+        '';
+
+      try {
+        const rawState = req.query.state ? String(req.query.state) : '';
+        if (rawState) {
+          const decoded = JSON.parse(Buffer.from(rawState, 'base64').toString('utf8'));
+          if (decoded && decoded.frontend) {
+            frontendBase = String(decoded.frontend);
+          }
+        }
+      } catch (_) {
+        // ignore malformed state
+      }
 
       if (frontendBase) {
         const redirectUrl = new URL('/auth/google', String(frontendBase));

@@ -76,7 +76,8 @@ const LoginModal: React.FC = () => {
           window.location.reload();
           return;
         }
-        window.location.href = `${api.API_BASE}/api/auth/google`;
+        const frontend = encodeURIComponent(window.location.origin);
+        window.location.href = `${api.API_BASE}/api/auth/google?frontend=${frontend}`;
       })
       .catch((e: any) => {
         setError(e?.message || 'Google login failed');
