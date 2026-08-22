@@ -82,8 +82,10 @@ async function start() {
   const distPath = path.join(process.cwd(), 'dist');
   const distIndexPath = path.join(distPath, 'index.html');
   const hasProductionBuild = fs.existsSync(distIndexPath);
+  const isRenderEnvironment = String(process.env.RENDER || '').toLowerCase() === 'true';
+  const shouldServeBuiltFrontend = hasProductionBuild && (isProduction || isRenderEnvironment);
 
-  if (hasProductionBuild) {
+  if (shouldServeBuiltFrontend) {
     app.use(express.static(distPath));
     app.use((req, res, next) => {
       if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
@@ -100,7 +102,7 @@ async function start() {
         appType: 'custom',
       });
       app.use(vite.middlewares);
-      app.use('*', async (req, res, next) => {
+      app.use(async (req, res, next) => {
         if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
           return next();
         }
