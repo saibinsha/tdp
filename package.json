@@ -68,7 +68,6 @@
     "marked": "^12.0.1",
     "mongoose": "^9.9.3",
     "multer": "^2.2.0",
-    "multer-storage-cloudinary": "^4.0.0",
     "nanoid": "^6.0.1",
     "next-themes": "^0.3.0",
     "passport": "^0.7.0",
