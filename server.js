@@ -27,7 +27,7 @@ const { initSockets } = require('./server/sockets');
 const { ensureSeedAdmin } = require('./server/utils/seedAdmin');
 const { ensureSeedDemoUsers } = require('./server/utils/seedDemoUsers');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 const DEFAULT_MONGODB_URI = 'mongodb+srv://madhu:667788@annadatha.raljj9h.mongodb.net/?appName=annadatha';
 
@@ -102,6 +102,15 @@ async function start() {
         next();
       });
       console.log('[Server] Serving production frontend build from /dist');
+    } else {
+      console.error('[Server] ERROR: /dist not found. Run "npm run build" before starting in production.');
+      // Serve a helpful error so non-API requests don't silently 404
+      app.use((req, res, next) => {
+        if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/socket.io')) {
+          return res.status(503).send('Frontend build not found. Run "npm run build" first.');
+        }
+        next();
+      });
     }
   }
 
