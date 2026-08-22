@@ -1,0 +1,11 @@
+{
+  "name": "TDP Party Platform",
+  "description": "Telugu Desam Party digital community platform featuring real-time chats, polls, news, works, blogs, surveys, reports, and administrative management.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
