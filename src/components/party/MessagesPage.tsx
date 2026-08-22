@@ -276,7 +276,7 @@ const MessagesPage: React.FC = () => {
     // so the onstop handler doesn't depend on stale React state.
     const capturedCallOther = callOtherRef.current;
     const capturedCallKind = callKindRef.current;
-    const capturedUserId = user?.id;
+    const capturedUserId = (user as any)?.id || (user as any)?._id;
 
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
