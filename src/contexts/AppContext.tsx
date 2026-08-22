@@ -433,6 +433,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('tdp_dm_target', dmTargetUserId);
   }, [dmTargetUserId]);
 
+  const normalizeBackendUser = useCallback((backendUser: any): User => {
+    const role: 'user' | 'admin' = backendUser?.role === 'admin' ? 'admin' : 'user';
+    const name = backendUser?.name || (role === 'admin' ? 'Admin' : 'User');
+    return {
+      id: String(backendUser?._id || backendUser?.id || ''),
+      membershipId: backendUser?.membershipId || '',
+      name,
+      email: backendUser?.email || '',
+      role,
+      avatar: String(name).slice(0, 2).toUpperCase(),
+      phone: backendUser?.phone || '',
+      profilePicture: backendUser?.profilePicture || '',
+      district: backendUser?.district || '',
+      constituency: backendUser?.constituency || '',
+      address: backendUser?.address || '',
+      joinedDate: backendUser?.createdAt || new Date().toISOString(),
+      authProvider: backendUser?.authProvider === 'google' ? 'google' : 'local',
+      isVerified: Boolean(backendUser?.isVerified),
+      createdByAdmin: Boolean(backendUser?.createdByAdmin),
+    };
+  }, []);
+
   useEffect(() => {
     const stored = localStorage.getItem('tdp_user');
     const tokens = api.getStoredTokens();
@@ -451,23 +473,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .then((me) => {
         const backendUser = me?.user || me;
         if (!backendUser || (!backendUser._id && !backendUser.id)) return;
-        const normalized: User = {
-          id: String(backendUser._id || backendUser.id || ''),
-          membershipId: backendUser.membershipId || '',
-          name: backendUser.name || 'User',
-          email: backendUser.email || '',
-          role: backendUser.role || 'user',
-          avatar: (backendUser.name || 'U').slice(0, 2).toUpperCase(),
-          phone: backendUser.phone || '',
-          profilePicture: backendUser.profilePicture || '',
-          district: backendUser.district || '',
-          constituency: backendUser.constituency || '',
-          address: backendUser.address || '',
-          joinedDate: backendUser.createdAt || new Date().toISOString(),
-          authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
-          isVerified: Boolean(backendUser.isVerified),
-          createdByAdmin: Boolean(backendUser.createdByAdmin),
-        };
+        const normalized = normalizeBackendUser(backendUser);
         setUser(normalized);
         localStorage.setItem('tdp_user', JSON.stringify(normalized));
       })
@@ -480,7 +486,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setIsAuthenticated(false);
         }
       });
-  }, []);
+  }, [normalizeBackendUser]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -519,27 +525,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const res = await api.authedRequest<{ ok: true; user: any }>('/api/users/me', 'PATCH', patch);
       const backendUser = res?.user || res;
       if (!backendUser) return;
-      const normalized: User = {
-        id: String(backendUser._id || backendUser.id || ''),
-        membershipId: backendUser.membershipId || '',
-        name: backendUser.name || 'User',
-        email: backendUser.email || '',
-        role: backendUser.role || 'user',
-        avatar: (backendUser.name || 'U').slice(0, 2).toUpperCase(),
-        phone: backendUser.phone || '',
-        profilePicture: backendUser.profilePicture || '',
-        district: backendUser.district || '',
-        constituency: backendUser.constituency || '',
-        address: backendUser.address || '',
-        joinedDate: backendUser.createdAt || new Date().toISOString(),
-        authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
-        isVerified: Boolean(backendUser.isVerified),
-        createdByAdmin: Boolean(backendUser.createdByAdmin),
-      };
+      const normalized = normalizeBackendUser(backendUser);
       setUser(normalized);
       localStorage.setItem('tdp_user', JSON.stringify(normalized));
     },
-    []
+    [normalizeBackendUser]
   );
 
   const toggleSidebar = () => setSidebarOpen(prev => !prev);
@@ -554,23 +544,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (res?.tokens) api.setStoredTokens(res.tokens);
     const backendUser = res?.user || res;
     if (!backendUser) return;
-    const normalized: User = {
-      id: String(backendUser.id || backendUser._id || ''),
-      membershipId: backendUser.membershipId || '',
-      name: backendUser.name || 'User',
-      email: backendUser.email || '',
-      role: backendUser.role || 'user',
-      avatar: (backendUser.name || 'U').slice(0, 2).toUpperCase(),
-      phone: backendUser.phone || '',
-      profilePicture: backendUser.profilePicture || '',
-      district: backendUser.district || '',
-      constituency: backendUser.constituency || '',
-      address: backendUser.address || '',
-      joinedDate: backendUser.createdAt || new Date().toISOString(),
-      authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
-      isVerified: Boolean(backendUser.isVerified),
-      createdByAdmin: Boolean(backendUser.createdByAdmin),
-    };
+    const normalized = normalizeBackendUser(backendUser);
 
     setUser(normalized);
     setIsAuthenticated(true);
@@ -583,7 +557,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // ignore
     }
-  }, []);
+  }, [normalizeBackendUser]);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
     const res = await api.request<{
@@ -595,23 +569,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (res?.tokens) api.setStoredTokens(res.tokens);
     const backendUser = res?.user || res;
     if (!backendUser) return;
-    const normalized: User = {
-      id: String(backendUser.id || backendUser._id || ''),
-      membershipId: backendUser.membershipId || '',
-      name: backendUser.name || 'User',
-      email: backendUser.email || '',
-      role: backendUser.role || 'user',
-      avatar: (backendUser.name || 'U').slice(0, 2).toUpperCase(),
-      phone: backendUser.phone || '',
-      profilePicture: backendUser.profilePicture || '',
-      district: backendUser.district || '',
-      constituency: backendUser.constituency || '',
-      address: backendUser.address || '',
-      joinedDate: backendUser.createdAt || new Date().toISOString(),
-      authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
-      isVerified: Boolean(backendUser.isVerified),
-      createdByAdmin: Boolean(backendUser.createdByAdmin),
-    };
+    const normalized = normalizeBackendUser(backendUser);
 
     setUser(normalized);
     setIsAuthenticated(true);
@@ -624,7 +582,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // ignore
     }
-  }, []);
+  }, [normalizeBackendUser]);
 
   const adminLogin = useCallback(async (email: string, password: string) => {
     const res = await api.request<{
@@ -636,23 +594,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (res?.tokens) api.setStoredTokens(res.tokens);
     const backendUser = res?.admin || res?.user || res;
     if (!backendUser) return;
-    const normalized: User = {
-      id: String(backendUser.id || backendUser._id || ''),
-      membershipId: backendUser.membershipId || '',
-      name: backendUser.name || 'Admin',
-      email: backendUser.email || '',
-      role: 'admin',
-      avatar: (backendUser.name || 'A').slice(0, 2).toUpperCase(),
-      phone: backendUser.phone || '',
-      profilePicture: backendUser.profilePicture || '',
-      district: backendUser.district || '',
-      constituency: backendUser.constituency || '',
-      address: backendUser.address || '',
-      joinedDate: backendUser.createdAt || new Date().toISOString(),
-      authProvider: backendUser.authProvider === 'google' ? 'google' : 'local',
-      isVerified: Boolean(backendUser.isVerified),
-      createdByAdmin: Boolean(backendUser.createdByAdmin),
-    };
+    const normalized = normalizeBackendUser({ ...backendUser, role: 'admin' });
 
     setUser(normalized);
     setIsAuthenticated(true);
@@ -665,7 +607,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       // ignore
     }
-  }, []);
+  }, [normalizeBackendUser]);
 
   const logout = useCallback(() => {
     setUser(null);

@@ -6,7 +6,7 @@ const { AppError } = require('../utils/AppError');
 const { signAccessToken, signRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
-const { getAppSettings } = require('../utils/appSettings');
+const { getAppSettingsReadOnly } = require('../utils/appSettings');
 
 const googleOAuthClient = new OAuth2Client();
 
@@ -27,8 +27,8 @@ function parseSignedState(raw) {
   if (parts.length !== 2) return null;
   const [payload, sig] = parts;
   const expected = crypto.createHmac('sha256', getStateSecret()).update(payload).digest('base64url');
-  const sigBuf = Buffer.from(sig);
-  const expBuf = Buffer.from(expected);
+  const sigBuf = Buffer.from(sig, 'base64url');
+  const expBuf = Buffer.from(expected, 'base64url');
   if (sigBuf.length !== expBuf.length) return null;
   if (!crypto.timingSafeEqual(sigBuf, expBuf)) return null;
   try {
@@ -224,7 +224,7 @@ const googleCallback = (req, res, next) => {
 };
 
 const registerLocal = asyncHandler(async (req, res) => {
-  const settings = await getAppSettings();
+  const settings = await getAppSettingsReadOnly();
   if (settings && settings.allowUserRegistration === false) {
     throw new AppError('User registration is currently disabled', 403);
   }
@@ -307,7 +307,7 @@ const loginLocal = asyncHandler(async (req, res) => {
 });
 
 const getAuthSettings = asyncHandler(async (req, res) => {
-  const settings = await getAppSettings();
+  const settings = await getAppSettingsReadOnly();
   res.json({
     ok: true,
     settings: {

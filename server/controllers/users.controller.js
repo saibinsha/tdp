@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { AppError } = require('../utils/AppError');
 const User = require('../models/User');
-const { getAppSettings, setAllowUserRegistration } = require('../utils/appSettings');
+const { getAppSettingsReadOnly, setAllowUserRegistration } = require('../utils/appSettings');
 
 const getMe = asyncHandler(async (req, res) => {
   res.json({
@@ -155,7 +155,7 @@ const directory = asyncHandler(async (req, res) => {
 });
 
 const getRegistrationSettings = asyncHandler(async (_req, res) => {
-  const settings = await getAppSettings();
+  const settings = await getAppSettingsReadOnly();
   res.json({
     ok: true,
     settings: {

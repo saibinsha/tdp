@@ -8,6 +8,10 @@ async function getAppSettings() {
   );
 }
 
+async function getAppSettingsReadOnly() {
+  return AppSetting.findOne({ key: 'global' });
+}
+
 async function setAllowUserRegistration(allowUserRegistration) {
   return AppSetting.findOneAndUpdate(
     { key: 'global' },
@@ -16,4 +20,4 @@ async function setAllowUserRegistration(allowUserRegistration) {
   );
 }
 
-module.exports = { getAppSettings, setAllowUserRegistration };
+module.exports = { getAppSettings, getAppSettingsReadOnly, setAllowUserRegistration };
