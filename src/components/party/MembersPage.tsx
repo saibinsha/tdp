@@ -89,7 +89,7 @@ const MembersPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8 overflow-x-hidden">
       <div className="mb-6">
         <h1 className="text-3xl font-black text-gray-900">Members Directory</h1>
         <p className="text-gray-500 mt-1">Connect with party members across all districts</p>
@@ -139,8 +139,8 @@ const MembersPage: React.FC = () => {
       {/* Members Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredMembers.map(member => (
-          <div key={member._id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-all group">
-            <div className="flex items-start gap-4">
+          <div key={member._id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-all group overflow-hidden">
+            <div className="flex items-start gap-4 min-w-0">
               {member.profilePicture ? (
                 <div className="w-14 h-14 rounded-xl overflow-hidden shadow-md border border-gray-100 bg-white flex-shrink-0">
                   <img

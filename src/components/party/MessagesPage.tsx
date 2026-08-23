@@ -1338,7 +1338,7 @@ const MessagesPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
+    <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8 overflow-x-hidden">
       <div className="mb-4">
         <h1 className="text-3xl font-black text-gray-900">Messages</h1>
       </div>

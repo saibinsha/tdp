@@ -993,7 +993,7 @@ const GroupsPage: React.FC = () => {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8 overflow-x-hidden">
       <div className="mb-6">
         <h1 className="text-3xl font-black text-gray-900">Groups</h1>
         <p className="text-gray-500 mt-1">Browse groups on the left and chat inside a group on the right</p>
