@@ -19,6 +19,9 @@ import java.util.Map;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
+    private static final String CALLS_CHANNEL_ID = "calls_channel";
+    private static final String GENERAL_CHANNEL_ID = "general_channel";
+
     private Map<String, String> lastData;
 
     @Override
@@ -32,99 +35,119 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
 
         Map<String, String> data = remoteMessage.getData();
-        if (data != null && data.size() > 0) {
+        if (data != null && !data.isEmpty()) {
             lastData = data;
             if (title == null) title = data.get("title");
             if (body == null) body = data.get("body");
-
-            String type = data.get("type");
-            if (type != null && type.equals("call")) {
-                if (title == null || title.trim().isEmpty()) title = "Incoming call";
-                if (body == null || body.trim().isEmpty()) body = "Tap to open";
-                sendNotification(title, body, true);
-                return;
-            }
         }
 
-        if (title == null || title.trim().isEmpty()) title = "Notification";
-        if (body == null) body = "";
+        String type = data != null ? data.get("type") : null;
+        boolean isCall = "call".equalsIgnoreCase(type);
 
-        sendNotification(title, body, false);
+        if (title == null || title.trim().isEmpty()) {
+            title = isCall ? "Incoming call" : "Notification";
+        }
+        if (body == null) {
+            body = isCall ? "Tap to answer or reject" : "";
+        }
+
+        sendNotification(title, body, isCall);
+    }
+
+    private PendingIntent buildMainPendingIntent(int requestCode, String autoAnswerValue) {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        if (lastData != null) {
+            if (lastData.containsKey("type")) intent.putExtra("type", lastData.get("type"));
+            if (lastData.containsKey("scope")) intent.putExtra("scope", lastData.get("scope"));
+            if (lastData.containsKey("fromUserId")) intent.putExtra("fromUserId", lastData.get("fromUserId"));
+            if (lastData.containsKey("toUserId")) intent.putExtra("toUserId", lastData.get("toUserId"));
+            if (lastData.containsKey("callId")) intent.putExtra("callId", lastData.get("callId"));
+            if (lastData.containsKey("kind")) intent.putExtra("kind", lastData.get("kind"));
+            if (lastData.containsKey("groupId")) intent.putExtra("groupId", lastData.get("groupId"));
+            if (lastData.containsKey("messageId")) intent.putExtra("messageId", lastData.get("messageId"));
+            if (lastData.containsKey("chatId")) intent.putExtra("chatId", lastData.get("chatId"));
+        }
+
+        if (autoAnswerValue != null) {
+            intent.putExtra("autoAnswer", autoAnswerValue);
+        }
+
+        int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                : PendingIntent.FLAG_UPDATE_CURRENT;
+
+        return PendingIntent.getActivity(this, requestCode, intent, flags);
     }
 
     private void sendNotification(String title, String messageBody, boolean isCall) {
-        Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (notificationManager == null) return;
 
-        if (lastData != null) {
-            try {
-                if (lastData.containsKey("type")) intent.putExtra("type", lastData.get("type"));
-                if (lastData.containsKey("scope")) intent.putExtra("scope", lastData.get("scope"));
-                if (lastData.containsKey("fromUserId")) intent.putExtra("fromUserId", lastData.get("fromUserId"));
-                if (lastData.containsKey("toUserId")) intent.putExtra("toUserId", lastData.get("toUserId"));
-                if (lastData.containsKey("callId")) intent.putExtra("callId", lastData.get("callId"));
-                if (lastData.containsKey("kind")) intent.putExtra("kind", lastData.get("kind"));
-                if (lastData.containsKey("groupId")) intent.putExtra("groupId", lastData.get("groupId"));
-                if (lastData.containsKey("messageId")) intent.putExtra("messageId", lastData.get("messageId"));
-                if (lastData.containsKey("autoAnswer")) intent.putExtra("autoAnswer", lastData.get("autoAnswer"));
-            } catch (Exception ignored) {
-            }
-        }
+        String channelId = isCall ? CALLS_CHANNEL_ID : GENERAL_CHANNEL_ID;
+        ensureChannel(notificationManager, isCall);
 
-        int flags;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            flags = PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE;
-        } else {
-            flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        }
-
-        int requestCode = (int) (System.currentTimeMillis() & 0xfffffff);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, requestCode, intent, flags);
-
-        String channelId = isCall ? "calls_channel" : "default_channel";
-        String channelName = isCall ? "Calls" : "General";
-
-        Uri defaultSoundUri = RingtoneManager.getDefaultUri(
+        Uri soundUri = RingtoneManager.getDefaultUri(
                 isCall ? RingtoneManager.TYPE_RINGTONE : RingtoneManager.TYPE_NOTIFICATION
         );
 
-        NotificationCompat.Builder notificationBuilder =
-                new NotificationCompat.Builder(this, channelId)
-                        .setSmallIcon(android.R.drawable.ic_dialog_info)
-                        .setContentTitle(title)
-                        .setContentText(messageBody)
-                        .setAutoCancel(true)
-                        .setSound(defaultSoundUri)
-                        .setPriority(isCall ? NotificationCompat.PRIORITY_MAX : NotificationCompat.PRIORITY_HIGH)
-                        .setCategory(isCall ? NotificationCompat.CATEGORY_CALL : NotificationCompat.CATEGORY_MESSAGE)
-                        .setContentIntent(pendingIntent);
+        int baseRequestCode = (int) (System.currentTimeMillis() & 0x7fffffff);
+        PendingIntent openIntent = buildMainPendingIntent(baseRequestCode, null);
 
-        NotificationManager notificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(messageBody)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(messageBody))
+                .setAutoCancel(true)
+                .setSound(soundUri)
+                .setPriority(isCall ? NotificationCompat.PRIORITY_MAX : NotificationCompat.PRIORITY_HIGH)
+                .setCategory(isCall ? NotificationCompat.CATEGORY_CALL : NotificationCompat.CATEGORY_MESSAGE)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentIntent(openIntent);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            int importance = isCall ? NotificationManager.IMPORTANCE_HIGH : NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel(channelId, channelName, importance);
+        if (isCall) {
+            PendingIntent answerIntent = buildMainPendingIntent(baseRequestCode + 1, "answer");
+            PendingIntent rejectIntent = buildMainPendingIntent(baseRequestCode + 2, "reject");
 
-            try {
-                AudioAttributes attrs = new AudioAttributes.Builder()
-                        .setUsage(isCall ? AudioAttributes.USAGE_NOTIFICATION_RINGTONE : AudioAttributes.USAGE_NOTIFICATION)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build();
-                channel.setSound(defaultSoundUri, attrs);
-                channel.enableVibration(true);
-            } catch (Exception ignored) {
-            }
-
-            notificationManager.createNotificationChannel(channel);
+            builder
+                    .setOngoing(true)
+                    .setTimeoutAfter(60000)
+                    .addAction(0, "Reject", rejectIntent)
+                    .addAction(0, "Answer", answerIntent)
+                    .setFullScreenIntent(openIntent, true);
         }
 
-        notificationManager.notify((int) System.currentTimeMillis(), notificationBuilder.build());
+        notificationManager.notify(baseRequestCode, builder.build());
+    }
+
+    private void ensureChannel(NotificationManager notificationManager, boolean isCall) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
+
+        String channelId = isCall ? CALLS_CHANNEL_ID : GENERAL_CHANNEL_ID;
+        String channelName = isCall ? "Calls" : "Messages";
+        int importance = isCall ? NotificationManager.IMPORTANCE_HIGH : NotificationManager.IMPORTANCE_DEFAULT;
+
+        NotificationChannel channel = new NotificationChannel(channelId, channelName, importance);
+        channel.enableVibration(true);
+
+        Uri soundUri = RingtoneManager.getDefaultUri(
+                isCall ? RingtoneManager.TYPE_RINGTONE : RingtoneManager.TYPE_NOTIFICATION
+        );
+
+        AudioAttributes attrs = new AudioAttributes.Builder()
+                .setUsage(isCall ? AudioAttributes.USAGE_NOTIFICATION_RINGTONE : AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+
+        channel.setSound(soundUri, attrs);
+        notificationManager.createNotificationChannel(channel);
     }
 
     @Override
     public void onNewToken(String token) {
         super.onNewToken(token);
-        // Token syncing is handled by MainActivity injecting token into WebView via window.setFcmToken(token).
     }
 }
