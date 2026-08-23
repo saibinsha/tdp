@@ -2586,6 +2586,40 @@ const AdminDashboard: React.FC = () => {
     <div>
       <h3 className="text-lg font-bold text-gray-900 mb-4">Chat Moderation</h3>
 
+      <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 className="text-sm font-bold text-gray-900">Manual Registration</h4>
+            <p className="text-xs text-gray-500">
+              Turn OFF to hide signup/register for normal users and allow only login/Google sign-in.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={updatingRegistrationSetting}
+            onClick={handleToggleUserRegistration}
+            className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-50 ${
+              allowUserRegistration
+                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+            }`}
+          >
+            <span
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                allowUserRegistration ? 'bg-green-600' : 'bg-gray-400'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  allowUserRegistration ? 'translate-x-4' : 'translate-x-1'
+                }`}
+              />
+            </span>
+            {allowUserRegistration ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </div>
+
       <div className="grid lg:grid-cols-12 gap-4">
         <div className="lg:col-span-4">
           <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
