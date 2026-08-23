@@ -27,7 +27,7 @@ function initials(name: string) {
 }
 
 const MembersPage: React.FC = () => {
-  const { setCurrentPage, isAuthenticated, setShowLoginModal, setDmTargetUserId } = useAppContext();
+  const { setCurrentPage, isAuthenticated, setShowLoginModal, setDmTargetUserId, setDmTargetUser } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDistrict, setFilterDistrict] = useState('All');
   const [selectedMember, setSelectedMember] = useState<DirectoryUser | null>(null);
@@ -82,6 +82,8 @@ const MembersPage: React.FC = () => {
 
   const handleChat = (memberId: string) => {
     if (!isAuthenticated) { setShowLoginModal(true); return; }
+    const member = items.find((m) => m._id === memberId);
+    if (member) setDmTargetUser({ _id: member._id, name: member.name, membershipId: member.membershipId, profilePicture: member.profilePicture, role: member.role, status: member.status });
     setDmTargetUserId(memberId);
     setCurrentPage('messages');
   };

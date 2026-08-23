@@ -111,7 +111,7 @@ function renderMediaPreview(media: ChatMedia, isOwn: boolean) {
 }
 
 const MessagesPage: React.FC = () => {
-  const { setCurrentPage, isAuthenticated, setShowLoginModal, user, dmTargetUserId, setDmTargetUserId } = useAppContext();
+  const { setCurrentPage, isAuthenticated, setShowLoginModal, user, dmTargetUserId, setDmTargetUserId, dmTargetUser, setDmTargetUser } = useAppContext();
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -839,9 +839,32 @@ const MessagesPage: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     if (!dmTargetUserId) return;
-    setActiveUserId(dmTargetUserId);
+    const otherId = dmTargetUserId;
+    setActiveUserId(otherId);
     setShowMobileChat(true);
-  }, [dmTargetUserId, isAuthenticated]);
+    setDmTargetUserId(null);
+    if (dmTargetUser) {
+      setDmTargetUser(null);
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => String(c.otherUser._id) === otherId);
+        if (idx === 0) return prev;
+        const existing: ConversationItem | null = idx >= 0 ? prev[idx] : null;
+        const nextItem: ConversationItem = existing || {
+          type: 'private',
+          otherUser: {
+            _id: otherId,
+            name: dmTargetUser.name,
+            membershipId: dmTargetUser.membershipId,
+            profilePicture: dmTargetUser.profilePicture,
+            role: dmTargetUser.role,
+            status: dmTargetUser.status,
+          },
+        };
+        const rest = prev.filter((_, i) => i !== idx);
+        return [nextItem, ...rest];
+      });
+    }
+  }, [dmTargetUserId, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!activeUserId) {

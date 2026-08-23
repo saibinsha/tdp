@@ -114,6 +114,8 @@ interface AppContextType {
   sendMessage: (roomId: string, text: string) => void;
   dmTargetUserId: string | null;
   setDmTargetUserId: (id: string | null) => void;
+  dmTargetUser: { _id: string; name: string; membershipId?: string; profilePicture?: string; role?: string; status?: string } | null;
+  setDmTargetUser: (user: { _id: string; name: string; membershipId?: string; profilePicture?: string; role?: string; status?: string } | null) => void;
   notifications: number;
   clearNotifications: () => void;
   showLoginModal: boolean;
@@ -271,6 +273,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const raw = localStorage.getItem('tdp_dm_target');
     return raw || null;
   });
+  const [dmTargetUser, setDmTargetUser] = useState<{ _id: string; name: string; membershipId?: string; profilePicture?: string; role?: string; status?: string } | null>(null);
   const [notifications, setNotifications] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginMode, setLoginMode] = useState<'user' | 'admin'>('user');
@@ -712,6 +715,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sendMessage,
       dmTargetUserId,
       setDmTargetUserId,
+      dmTargetUser,
+      setDmTargetUser,
       notifications,
       clearNotifications,
       showLoginModal,
