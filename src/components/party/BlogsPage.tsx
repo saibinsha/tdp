@@ -445,15 +445,15 @@ const BlogsPage: React.FC = () => {
         {filteredBlogs.map((blog) => (
           <div key={blog._id} className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             {blog.media?.[0]?.url && (
-              <div className="relative h-52 overflow-hidden bg-gray-100">
+              <div className="relative overflow-hidden bg-gray-100 flex items-center justify-center">
                 {blog.media[0].resourceType === 'video' || inferResourceTypeFromUrl(blog.media[0].url) === 'video' ? (
-                  <video src={blog.media[0].url} controls className="w-full h-full object-cover" />
+                  <video src={blog.media[0].url} controls className="w-full object-contain" />
                 ) : (
                   <img
                     src={blog.media[0].url}
                     alt={blog.title}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover"
+                    className="w-full object-contain"
                   />
                 )}
                 {blog.media.length > 1 && (
