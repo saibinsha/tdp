@@ -102,7 +102,7 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm overflow-visible">
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm overflow-hidden w-full">
       {/* Top accent bar */}
       <div className="h-1 bg-gradient-to-r from-yellow-400 via-blue-600 to-yellow-400" />
 

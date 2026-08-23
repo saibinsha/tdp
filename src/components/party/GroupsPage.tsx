@@ -993,7 +993,7 @@ const GroupsPage: React.FC = () => {
 
   return (
     <>
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-8">
       <div className="mb-6">
         <h1 className="text-3xl font-black text-gray-900">Groups</h1>
         <p className="text-gray-500 mt-1">Browse groups on the left and chat inside a group on the right</p>
@@ -1001,8 +1001,8 @@ const GroupsPage: React.FC = () => {
 
       <AIInsightBanner text="Groups have a left-side list with search. After joining, you can see previous messages and chat live with media support." />
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm" style={{ height: '650px' }}>
-        <div className="flex h-full">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" style={{ height: 'calc(100svh - 220px)', minHeight: '480px' }}>
+        <div className="flex h-full overflow-hidden">
           {/* Left group list */}
           <div className={`w-full md:w-96 border-r border-gray-200 flex-col ${showMobileChat ? 'hidden md:flex' : 'flex'}`}>
             <div className="p-4 border-b border-gray-100">
@@ -1110,7 +1110,7 @@ const GroupsPage: React.FC = () => {
           </div>
 
           {/* Right group chat */}
-          <div className={`flex-1 flex flex-col ${activeGroup ? (showMobileChat ? 'flex' : 'hidden md:flex') : 'hidden md:flex'}`}>
+          <div className={`flex-1 flex flex-col min-w-0 overflow-hidden ${activeGroup ? (showMobileChat ? 'flex' : 'hidden md:flex') : 'hidden md:flex'}`}>
             {!activeGroup ? (
               <div className="flex-1 flex items-center justify-center bg-gray-50">
                 <div className="text-center">
@@ -1239,7 +1239,7 @@ const GroupsPage: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-5 py-4 space-y-3 bg-gray-50">
                       {loadingMessages && <p className="text-sm text-gray-500">Loading...</p>}
                       {error && <p className="text-sm text-red-600">{error}</p>}
 
@@ -1253,19 +1253,19 @@ const GroupsPage: React.FC = () => {
                         const time = msg?.createdAt ? new Date(msg.createdAt) : new Date();
                         return (
                           <div key={msg._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[70%] ${isOwn ? 'order-1' : ''}`}>
+                            <div className={`max-w-[75%] sm:max-w-[70%] ${isOwn ? 'order-1' : ''}`}>
                               {!isOwn && (
-                                <p className="text-[10px] text-gray-400 font-medium mb-1 ml-1">{senderName}</p>
+                                <p className="text-[10px] text-gray-400 font-medium mb-1 ml-2">{senderName}</p>
                               )}
-                              <div className={`px-4 py-2.5 rounded-2xl text-sm relative group ${
+                              <div className={`px-3 py-2 rounded-2xl text-sm relative group break-words ${
                                 isOwn
-                                  ? 'bg-purple-600 text-white rounded-br-md'
-                                  : 'bg-white text-gray-800 rounded-bl-md border border-gray-100 shadow-sm'
+                                  ? 'bg-purple-600 text-white rounded-br-sm'
+                                  : 'bg-white text-gray-800 rounded-bl-sm border border-gray-100 shadow-sm'
                               }`}>
                                 {canDelete && (
                                   <button
                                     onClick={() => void handleDeleteMessage(msg._id)}
-                                    className={`absolute -top-2 -right-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity ${
+                                    className={`absolute -top-2 -right-2 p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity ${
                                       isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-gray-100 hover:bg-gray-200'
                                     }`}
                                     title="Delete for everyone"
@@ -1293,7 +1293,7 @@ const GroupsPage: React.FC = () => {
                                   </>
                                 )}
                               </div>
-                              <p className={`text-[10px] text-gray-400 mt-1 ${isOwn ? 'text-right mr-1' : 'ml-1'}`}>
+                              <p className={`text-[10px] text-gray-400 mt-0.5 ${isOwn ? 'text-right mr-1' : 'ml-2'}`}>
                                 {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
@@ -1303,7 +1303,7 @@ const GroupsPage: React.FC = () => {
                       <div ref={messagesEndRef} />
                     </div>
 
-                    <div className="px-2 sm:px-4 py-3 border-t border-gray-100 bg-white">
+                    <div className="px-2 sm:px-3 py-2 sm:py-3 border-t border-gray-100 bg-white flex-shrink-0">
                       <div className="flex items-center gap-1 sm:gap-2 w-full">
                         <input
                           ref={fileInputRef}
@@ -1318,16 +1318,16 @@ const GroupsPage: React.FC = () => {
                         <button
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploading}
-                          className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
                         >
-                          <Paperclip className="w-4 h-4 text-gray-400" />
+                          <Paperclip className="w-5 h-5 text-gray-500" />
                         </button>
                         <button
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploading}
-                          className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 flex-shrink-0"
                         >
-                          <Image className="w-4 h-4 text-gray-400" />
+                          <Image className="w-5 h-5 text-gray-500" />
                         </button>
                         <input
                           type="text"
@@ -1335,15 +1335,15 @@ const GroupsPage: React.FC = () => {
                           onChange={(e) => setMessageInput(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && void handleSend()}
                           placeholder={uploading ? 'Uploading...' : 'Type a message...'}
-                          className="flex-1 min-w-0 px-3 sm:px-4 py-2 border border-gray-200 rounded-xl text-sm focus:border-purple-500 outline-none"
+                          className="flex-1 min-w-0 px-3 py-2.5 bg-gray-100 border-0 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                           disabled={uploading}
                         />
                         <button
                           onClick={() => void handleSend()}
                           disabled={uploading || !messageInput.trim()}
-                          className="p-2 sm:p-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex-shrink-0"
+                          className="p-2.5 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50 flex-shrink-0"
                         >
-                          <Send className="w-4 h-4" />
+                          <Send className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
