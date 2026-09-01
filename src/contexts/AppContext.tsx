@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { parseAutoAnswer } from '@/lib/parseAutoAnswer';
 import { connectSocket, disconnectSocket } from '@/lib/socket';
 
 declare global {
@@ -296,11 +297,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     window.handlePushOpen = (payload: any) => {
       try {
-        const parseAutoAnswer = (value: any) => {
-          const v = String(value ?? '').trim().toLowerCase();
-          return value === true || value === 1 || v === '1' || v === 'true' || v === 'yes';
-        };
-
         const type = String(payload?.type || '').trim();
         const scope = String(payload?.scope || '').trim();
 

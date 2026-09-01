@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { connectSocket } from '@/lib/socket';
+import { parseAutoAnswer } from '@/lib/parseAutoAnswer';
 import Navbar from './party/Navbar';
 import Footer from './party/Footer';
 import LoginModal from './party/LoginModal';
@@ -42,8 +43,7 @@ const AppLayout: React.FC = () => {
         const fromUserId = String(payload?.from?._id || '').trim();
         if (!fromUserId) return;
 
-        const aaRaw = String(payload?.autoAnswer ?? '').trim().toLowerCase();
-        const aa = payload?.autoAnswer === true || payload?.autoAnswer === 1 || aaRaw === '1' || aaRaw === 'true' || aaRaw === 'yes';
+        const aa = parseAutoAnswer(payload?.autoAnswer);
 
         localStorage.setItem(
           'tdp_pending_incoming_call',

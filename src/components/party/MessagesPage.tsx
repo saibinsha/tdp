@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { api } from '@/lib/api';
+import { parseAutoAnswer } from '@/lib/parseAutoAnswer';
 import { connectSocket } from '@/lib/socket';
 
 type ChatMedia = { url: string; publicId?: string; resourceType?: string } | null;
@@ -686,13 +687,7 @@ const MessagesPage: React.FC = () => {
       const parsed = JSON.parse(raw);
       const toUserId = String(parsed?.toUserId || '').trim();
       const kind = parsed?.kind === 'video' ? 'video' : 'audio';
-      const autoAnswerRaw = String(parsed?.autoAnswer ?? '').trim().toLowerCase();
-      const autoAnswer =
-        parsed?.autoAnswer === true ||
-        parsed?.autoAnswer === 1 ||
-        autoAnswerRaw === '1' ||
-        autoAnswerRaw === 'true' ||
-        autoAnswerRaw === 'yes';
+      const autoAnswer = parseAutoAnswer(parsed?.autoAnswer);
       if (!toUserId) return;
 
       localStorage.removeItem('tdp_admin_auto_call');
@@ -876,13 +871,7 @@ const MessagesPage: React.FC = () => {
       setCallOther(otherUser);
       callOtherRef.current = otherUser;
 
-      const aaRaw = String(parsed?.autoAnswer ?? '').trim().toLowerCase();
-      const aa =
-        parsed?.autoAnswer === true ||
-        parsed?.autoAnswer === 1 ||
-        aaRaw === '1' ||
-        aaRaw === 'true' ||
-        aaRaw === 'yes';
+      const aa = parseAutoAnswer(parsed?.autoAnswer);
       const callAction = String(parsed?.callAction || '').trim().toLowerCase();
       if (callAction === 'reject') {
         const sock = callSocketRef.current || connectSocket();
@@ -991,14 +980,15 @@ const MessagesPage: React.FC = () => {
       callOtherRef.current = otherUser;
 
       const isAdminCaller = String(payload?.from?.role || '').toLowerCase() === 'admin';
-      const aaRaw = String(payload?.autoAnswer ?? '').trim().toLowerCase();
-      const aa =
-        isAdminCaller ||
-        payload?.autoAnswer === true ||
-        payload?.autoAnswer === 1 ||
-        aaRaw === '1' ||
-        aaRaw === 'true' ||
-        aaRaw === 'yes';
+      const callAction = String(payload?.callAction || '').trim().toLowerCase();
+      if (callAction === 'reject') {
+        const sock = callSocketRef.current || connectSocket();
+        if (!callSocketRef.current) callSocketRef.current = sock;
+        sock.emit('call:reject', { callId: cid, toUserId: fromId });
+        cleanupCall();
+        return;
+      }
+      const aa = isAdminCaller || parseAutoAnswer(payload?.autoAnswer);
       if (aa) {
         setCallIncoming(false);
         setCallOpen(true);
