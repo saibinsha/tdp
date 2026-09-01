@@ -884,6 +884,15 @@ const MessagesPage: React.FC = () => {
         aaRaw === 'true' ||
         aaRaw === 'yes';
       const callAction = String(parsed?.callAction || '').trim().toLowerCase();
+      if (callAction === 'reject') {
+        const sock = callSocketRef.current || connectSocket();
+        if (!callSocketRef.current) callSocketRef.current = sock;
+        sock.emit('call:reject', { callId: cid, toUserId: String(parsed.fromUserId) });
+        localStorage.removeItem('tdp_pending_incoming_call');
+        cleanupCall();
+        return;
+      }
+
       if (aa) {
         setCallIncoming(false);
         setCallOpen(true);
@@ -893,14 +902,6 @@ const MessagesPage: React.FC = () => {
           void acceptIncoming(String(parsed.callId));
         }, 50);
       } else {
-        if (callAction === 'reject') {
-          const sock = callSocketRef.current || connectSocket();
-          if (!callSocketRef.current) callSocketRef.current = sock;
-          sock.emit('call:reject', { callId: cid, toUserId: String(parsed.fromUserId) });
-          localStorage.removeItem('tdp_pending_incoming_call');
-          cleanupCall();
-          return;
-        }
         setCallIncoming(true);
         setCallOpen(true);
         setCallStatus('ringing');
