@@ -100,7 +100,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 isCall ? RingtoneManager.TYPE_RINGTONE : RingtoneManager.TYPE_NOTIFICATION
         );
 
-        int baseRequestCode = (int) (System.currentTimeMillis() & 0x7fffffff);
+        int baseRequestCode = (int) (System.currentTimeMillis() & 0x0fffffff);
         int notificationId = resolveNotificationId(isCall, data, baseRequestCode);
         PendingIntent openIntent = buildMainPendingIntent(baseRequestCode, null, null, data);
 
