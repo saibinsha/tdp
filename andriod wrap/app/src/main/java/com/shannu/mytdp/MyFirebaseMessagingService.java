@@ -22,8 +22,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String CALLS_CHANNEL_ID = "calls_channel";
     private static final String GENERAL_CHANNEL_ID = "general_channel";
 
-    private Map<String, String> lastData;
-
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         String title = null;
@@ -36,7 +34,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         Map<String, String> data = remoteMessage.getData();
         if (data != null && !data.isEmpty()) {
-            lastData = data;
             if (title == null) title = data.get("title");
             if (body == null) body = data.get("body");
         }
@@ -51,23 +48,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             body = isCall ? "Tap to answer or reject" : "";
         }
 
-        sendNotification(title, body, isCall);
+        sendNotification(title, body, isCall, data);
     }
 
-    private PendingIntent buildMainPendingIntent(int requestCode, String autoAnswerValue) {
+    private PendingIntent buildMainPendingIntent(int requestCode, String autoAnswerValue, Map<String, String> data) {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        if (lastData != null) {
-            if (lastData.containsKey("type")) intent.putExtra("type", lastData.get("type"));
-            if (lastData.containsKey("scope")) intent.putExtra("scope", lastData.get("scope"));
-            if (lastData.containsKey("fromUserId")) intent.putExtra("fromUserId", lastData.get("fromUserId"));
-            if (lastData.containsKey("toUserId")) intent.putExtra("toUserId", lastData.get("toUserId"));
-            if (lastData.containsKey("callId")) intent.putExtra("callId", lastData.get("callId"));
-            if (lastData.containsKey("kind")) intent.putExtra("kind", lastData.get("kind"));
-            if (lastData.containsKey("groupId")) intent.putExtra("groupId", lastData.get("groupId"));
-            if (lastData.containsKey("messageId")) intent.putExtra("messageId", lastData.get("messageId"));
-            if (lastData.containsKey("chatId")) intent.putExtra("chatId", lastData.get("chatId"));
+        if (data != null) {
+            if (data.containsKey("type")) intent.putExtra("type", data.get("type"));
+            if (data.containsKey("scope")) intent.putExtra("scope", data.get("scope"));
+            if (data.containsKey("fromUserId")) intent.putExtra("fromUserId", data.get("fromUserId"));
+            if (data.containsKey("toUserId")) intent.putExtra("toUserId", data.get("toUserId"));
+            if (data.containsKey("callId")) intent.putExtra("callId", data.get("callId"));
+            if (data.containsKey("kind")) intent.putExtra("kind", data.get("kind"));
+            if (data.containsKey("groupId")) intent.putExtra("groupId", data.get("groupId"));
+            if (data.containsKey("messageId")) intent.putExtra("messageId", data.get("messageId"));
+            if (data.containsKey("chatId")) intent.putExtra("chatId", data.get("chatId"));
         }
 
         if (autoAnswerValue != null) {
@@ -81,7 +78,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return PendingIntent.getActivity(this, requestCode, intent, flags);
     }
 
-    private void sendNotification(String title, String messageBody, boolean isCall) {
+    private void sendNotification(String title, String messageBody, boolean isCall, Map<String, String> data) {
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (notificationManager == null) return;
@@ -94,7 +91,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         );
 
         int baseRequestCode = (int) (System.currentTimeMillis() & 0x7fffffff);
-        PendingIntent openIntent = buildMainPendingIntent(baseRequestCode, null);
+        PendingIntent openIntent = buildMainPendingIntent(baseRequestCode, null, data);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -109,8 +106,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .setContentIntent(openIntent);
 
         if (isCall) {
-            PendingIntent answerIntent = buildMainPendingIntent(baseRequestCode + 1, "answer");
-            PendingIntent rejectIntent = buildMainPendingIntent(baseRequestCode + 2, "reject");
+            PendingIntent answerIntent = buildMainPendingIntent(baseRequestCode + 1, "answer", data);
+            PendingIntent rejectIntent = buildMainPendingIntent(baseRequestCode + 2, "reject", data);
 
             builder
                     .setOngoing(true)

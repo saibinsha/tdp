@@ -316,7 +316,8 @@ public class MainActivity extends AppCompatActivity {
                 String scheme = uri.getScheme();
 
                 if ("mytdp".equalsIgnoreCase(scheme)) {
-                    return false;
+                    handleIntentData(new Intent(Intent.ACTION_VIEW, uri));
+                    return true;
                 }
 
                 if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
