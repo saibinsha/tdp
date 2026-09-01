@@ -124,6 +124,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
 
         String channelId = isCall ? CALLS_CHANNEL_ID : GENERAL_CHANNEL_ID;
+        NotificationChannel existingChannel = notificationManager.getNotificationChannel(channelId);
+        if (existingChannel != null) return;
+
         String channelName = isCall ? "Calls" : "Messages";
         int importance = isCall ? NotificationManager.IMPORTANCE_HIGH : NotificationManager.IMPORTANCE_DEFAULT;
 

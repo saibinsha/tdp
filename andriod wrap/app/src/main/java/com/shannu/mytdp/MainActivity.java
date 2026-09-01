@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String BASE_WEB_URL = "https://mytelugudeshamparty.onrender.com";
     private static final String LEGACY_WEB_HOST = "telugudeshamparty.onrender.com";
-    private static final String CURRENT_WEB_HOST = "mytelugudeshamparty.onrender.com";
+    private static final String CURRENT_WEB_HOST = Uri.parse(BASE_WEB_URL).getHost();
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -321,9 +321,9 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
-                    String uriString = uri.toString();
-                    if (uriString.contains("/api/auth/google") || !isAllowedHost(uri)) {
-                        openExternalUrl(uriString);
+                    String path = uri.getPath();
+                    if ("/api/auth/google".equals(path) || !isAllowedHost(uri)) {
+                        openExternalUrl(uri.toString());
                         return true;
                     }
                     return false;
@@ -352,7 +352,7 @@ public class MainActivity extends AppCompatActivity {
                         String token = task.getResult();
                         if (token == null || token.trim().isEmpty()) return;
 
-                        String safe = token.replace("'", "\\'");
+                        String safe = escapeJs(token);
                         webView.evaluateJavascript("window.setFcmToken && window.setFcmToken('" + safe + "')", null);
                     });
                 } catch (Exception e) {
