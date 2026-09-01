@@ -21,6 +21,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private static final String CALLS_CHANNEL_ID = "calls_channel";
     private static final String GENERAL_CHANNEL_ID = "general_channel";
+    private static final int FALLBACK_CALL_NOTIFICATION_ID = 5001;
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
@@ -91,6 +92,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         );
 
         int baseRequestCode = (int) (System.currentTimeMillis() & 0x7fffffff);
+        int notificationId = resolveNotificationId(isCall, data, baseRequestCode);
         PendingIntent openIntent = buildMainPendingIntent(baseRequestCode, null, data);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
@@ -117,7 +119,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     .setFullScreenIntent(openIntent, true);
         }
 
-        notificationManager.notify(baseRequestCode, builder.build());
+        notificationManager.notify(notificationId, builder.build());
+    }
+
+    private int resolveNotificationId(boolean isCall, Map<String, String> data, int fallbackId) {
+        if (!isCall) return fallbackId;
+        if (data == null) return FALLBACK_CALL_NOTIFICATION_ID;
+
+        String callId = data.get("callId");
+        if (callId == null || callId.trim().isEmpty()) {
+            return FALLBACK_CALL_NOTIFICATION_ID;
+        }
+
+        int hash = callId.hashCode();
+        if (hash == Integer.MIN_VALUE) {
+            return FALLBACK_CALL_NOTIFICATION_ID;
+        }
+        return Math.abs(hash);
     }
 
     private void ensureChannel(NotificationManager notificationManager, boolean isCall) {
