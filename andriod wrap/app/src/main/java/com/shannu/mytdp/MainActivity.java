@@ -209,16 +209,16 @@ public class MainActivity extends AppCompatActivity {
     private class WebAppBridge {
         @JavascriptInterface
         public void googleSignIn() {
-            // Open Google Sign-In in external browser
+            // Use the native Google Sign-In popup so the resulting login is
+            // delivered directly back into this WebView instead of being
+            // stranded in an external browser session.
             runOnUiThread(() -> {
                 try {
-                    String googleSignInUrl = "https://telugudeshamparty.onrender.com/api/auth/google";
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(googleSignInUrl));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    Log.i(TAG, "Opening Google Sign-In in external browser");
+                    startGoogleSignIn();
+                    Log.i(TAG, "Starting native Google Sign-In");
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to open browser for Google Sign-In", e);
+                    Log.e(TAG, "Failed to start Google Sign-In", e);
+                    sendGoogleSignInErrorToWeb("Failed to start Google sign-in.");
                 }
             });
         }
@@ -409,34 +409,6 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 @Override
-                        try {
-                            String[] resources = request.getResources();
-                            request.grant(resources);
-                            
-                            // Optimization for audio calls
-                            boolean hasAudioPermission = false;
-                            for (String resource : resources) {
-                                if (resource.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
-                                    hasAudioPermission = true;
-                                    break;
-                                }
-                            }
-                            
-                            if (hasAudioPermission) {
-                                AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                                if (audioManager != null) {
-                                    audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
-                                    audioManager.setMicrophoneMute(false);
-                                    Log.i(TAG, "Audio permission granted - communication mode set");
-                                }
-                            }
-                        } catch (Exception e) {
-                            Log.e(TAG, "Permission request failed", e);
-                        }
-                    });
-                }
-
-                @Override
                 public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
@@ -469,6 +441,39 @@ public class MainActivity extends AppCompatActivity {
                     pendingPushJson = null;
                 }
             }
+            });
+
+            webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onPermissionRequest(final PermissionRequest request) {
+                    runOnUiThread(() -> {
+                        try {
+                            String[] resources = request.getResources();
+                            request.grant(resources);
+
+                            // Optimization for audio calls
+                            boolean hasAudioPermission = false;
+                            for (String resource : resources) {
+                                if (resource.equals(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) {
+                                    hasAudioPermission = true;
+                                    break;
+                                }
+                            }
+
+                            if (hasAudioPermission) {
+                                AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                                if (audioManager != null) {
+                                    audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
+                                    audioManager.setMicrophoneMute(false);
+                                    Log.i(TAG, "Audio permission granted - communication mode set");
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.e(TAG, "Permission request failed", e);
+                        }
+                    });
+                }
+            });
 
             webView.loadUrl("https://telugudeshamparty.onrender.com/");
         } catch (Exception e) {
