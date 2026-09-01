@@ -42,7 +42,8 @@ const AppLayout: React.FC = () => {
         const fromUserId = String(payload?.from?._id || '').trim();
         if (!fromUserId) return;
 
-        const aa = Boolean(payload?.autoAnswer) || String(payload?.autoAnswer || '') === '1';
+        const aaRaw = String(payload?.autoAnswer ?? '').trim().toLowerCase();
+        const aa = payload?.autoAnswer === true || payload?.autoAnswer === 1 || aaRaw === '1' || aaRaw === 'true' || aaRaw === 'yes';
 
         localStorage.setItem(
           'tdp_pending_incoming_call',

@@ -296,6 +296,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     window.handlePushOpen = (payload: any) => {
       try {
+        const parseAutoAnswer = (value: any) => {
+          const v = String(value ?? '').trim().toLowerCase();
+          return value === true || value === 1 || v === '1' || v === 'true' || v === 'yes';
+        };
+
         const type = String(payload?.type || '').trim();
         const scope = String(payload?.scope || '').trim();
 
@@ -341,7 +346,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (scope === 'private') {
             const fromUserId = String(payload?.fromUserId || '').trim();
             const isAdminCaller = String(payload?.fromRole || '').toLowerCase() === 'admin';
-            const autoAnswer = isAdminCaller || Boolean(payload?.autoAnswer) || String(payload?.autoAnswer || '') === '1';
+            const callAction = String(payload?.callAction || '').trim().toLowerCase();
+            const autoAnswer = callAction === 'answer' || isAdminCaller || parseAutoAnswer(payload?.autoAnswer);
             if (fromUserId) {
               localStorage.setItem(
                 'tdp_pending_incoming_call',
@@ -351,6 +357,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                   kind: String(payload?.kind || ''),
                   fromUserId,
                   autoAnswer,
+                  callAction,
                 })
               );
               setCurrentPage('messages');

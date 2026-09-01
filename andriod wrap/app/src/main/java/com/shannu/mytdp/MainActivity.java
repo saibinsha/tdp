@@ -29,6 +29,12 @@ import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.ArrayList;
@@ -39,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final int FILECHOOSER_RESULTCODE = 1;
     private static final int PERMISSIONS_REQUEST_CODE = 1001;
+    private static final int GOOGLE_SIGN_IN_REQUEST_CODE = 9001;
 
     private static final String BASE_WEB_URL = "https://mytelugudeshamparty.onrender.com";
     private static final String LEGACY_WEB_HOST = "telugudeshamparty.onrender.com";
@@ -46,11 +53,65 @@ public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
+    private GoogleSignInClient googleSignInClient;
 
     private String pendingPushJson = null;
     private String loginToken = null;
     private String loginEmail = null;
     private String loginName = null;
+
+    private void initGoogleSignIn() {
+        try {
+            int resId = getResources().getIdentifier("default_web_client_id", "string", getPackageName());
+            String webClientId = resId != 0 ? getString(resId) : "";
+            if (webClientId == null || webClientId.trim().isEmpty()) {
+                googleSignInClient = null;
+                return;
+            }
+
+            GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestEmail()
+                    .requestIdToken(webClientId)
+                    .build();
+            googleSignInClient = GoogleSignIn.getClient(this, gso);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize Google Sign-In", e);
+            googleSignInClient = null;
+        }
+    }
+
+    private boolean startGoogleSignIn() {
+        try {
+            if (googleSignInClient == null) {
+                initGoogleSignIn();
+            }
+            if (googleSignInClient == null) {
+                sendGoogleSignInErrorToWeb("Google Sign-In is not configured.");
+                return false;
+            }
+            Intent signInIntent = googleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, GOOGLE_SIGN_IN_REQUEST_CODE);
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start Google Sign-In", e);
+            sendGoogleSignInErrorToWeb("Failed to start Google Sign-In.");
+            return false;
+        }
+    }
+
+    private void sendGoogleIdTokenToWeb(String idToken) {
+        if (webView == null) return;
+        String safe = escapeJs(idToken == null ? "" : idToken);
+        String js = "(function(){try{if(window.onNativeGoogleSignIn){window.onNativeGoogleSignIn(\"" + safe + "\");}}catch(e){}})();";
+        webView.post(() -> webView.evaluateJavascript(js, null));
+    }
+
+    private void sendGoogleSignInErrorToWeb(String message) {
+        if (webView == null) return;
+        String safe = escapeJs(message == null ? "" : message);
+        String js = "(function(){try{if(window.onNativeGoogleSignInError){window.onNativeGoogleSignInError(\"" + safe + "\");}}catch(e){}})();";
+        webView.post(() -> webView.evaluateJavascript(js, null));
+    }
 
     private void handleIntentData(Intent intent) {
         if (intent == null) return;
@@ -127,7 +188,12 @@ public class MainActivity extends AppCompatActivity {
     private class WebAppBridge {
         @JavascriptInterface
         public void googleSignIn() {
-            runOnUiThread(() -> openExternalUrl(BASE_WEB_URL + "/api/auth/google"));
+            runOnUiThread(() -> {
+                boolean started = startGoogleSignIn();
+                if (!started) {
+                    openExternalUrl(BASE_WEB_URL + "/api/auth/google");
+                }
+            });
         }
 
         @JavascriptInterface
@@ -206,6 +272,8 @@ public class MainActivity extends AppCompatActivity {
             String groupId = intent.getStringExtra("groupId");
             String messageId = intent.getStringExtra("messageId");
             String autoAnswer = intent.getStringExtra("autoAnswer");
+            String callAction = intent.getStringExtra("callAction");
+            String fromRole = intent.getStringExtra("fromRole");
 
             if (type == null && callId == null && fromUserId == null && messageId == null && groupId == null) {
                 return;
@@ -220,7 +288,9 @@ public class MainActivity extends AppCompatActivity {
                     "\"kind\":\"" + escapeJs(kind) + "\"," +
                     "\"groupId\":\"" + escapeJs(groupId) + "\"," +
                     "\"messageId\":\"" + escapeJs(messageId) + "\"," +
-                    "\"autoAnswer\":\"" + escapeJs(autoAnswer) + "\"" +
+                    "\"autoAnswer\":\"" + escapeJs(autoAnswer) + "\"," +
+                    "\"callAction\":\"" + escapeJs(callAction) + "\"," +
+                    "\"fromRole\":\"" + escapeJs(fromRole) + "\"" +
                     "}";
         } catch (Exception ignored) {
         }
@@ -273,6 +343,8 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "WebView not found in layout");
             return;
         }
+
+        initGoogleSignIn();
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -429,6 +501,26 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == GOOGLE_SIGN_IN_REQUEST_CODE) {
+            try {
+                Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                String idToken = account != null ? account.getIdToken() : null;
+                if (idToken == null || idToken.trim().isEmpty()) {
+                    sendGoogleSignInErrorToWeb("Google sign-in returned empty token.");
+                } else {
+                    sendGoogleIdTokenToWeb(idToken);
+                }
+            } catch (ApiException e) {
+                Log.e(TAG, "Google Sign-In ApiException: " + e.getStatusCode(), e);
+                sendGoogleSignInErrorToWeb("Google sign-in failed (" + e.getStatusCode() + ").");
+            } catch (Exception e) {
+                Log.e(TAG, "Google Sign-In failed", e);
+                sendGoogleSignInErrorToWeb("Google sign-in failed.");
+            }
+            return;
+        }
 
         if (requestCode == FILECHOOSER_RESULTCODE && filePathCallback != null) {
             Uri[] result = null;

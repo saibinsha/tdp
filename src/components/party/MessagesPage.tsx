@@ -686,7 +686,13 @@ const MessagesPage: React.FC = () => {
       const parsed = JSON.parse(raw);
       const toUserId = String(parsed?.toUserId || '').trim();
       const kind = parsed?.kind === 'video' ? 'video' : 'audio';
-      const autoAnswer = Boolean(parsed?.autoAnswer);
+      const autoAnswerRaw = String(parsed?.autoAnswer ?? '').trim().toLowerCase();
+      const autoAnswer =
+        parsed?.autoAnswer === true ||
+        parsed?.autoAnswer === 1 ||
+        autoAnswerRaw === '1' ||
+        autoAnswerRaw === 'true' ||
+        autoAnswerRaw === 'yes';
       if (!toUserId) return;
 
       localStorage.removeItem('tdp_admin_auto_call');
@@ -870,7 +876,14 @@ const MessagesPage: React.FC = () => {
       setCallOther(otherUser);
       callOtherRef.current = otherUser;
 
-      const aa = Boolean(parsed?.autoAnswer) || String(parsed?.autoAnswer || '') === '1';
+      const aaRaw = String(parsed?.autoAnswer ?? '').trim().toLowerCase();
+      const aa =
+        parsed?.autoAnswer === true ||
+        parsed?.autoAnswer === 1 ||
+        aaRaw === '1' ||
+        aaRaw === 'true' ||
+        aaRaw === 'yes';
+      const callAction = String(parsed?.callAction || '').trim().toLowerCase();
       if (aa) {
         setCallIncoming(false);
         setCallOpen(true);
@@ -880,6 +893,14 @@ const MessagesPage: React.FC = () => {
           void acceptIncoming(String(parsed.callId));
         }, 50);
       } else {
+        if (callAction === 'reject') {
+          const sock = callSocketRef.current || connectSocket();
+          if (!callSocketRef.current) callSocketRef.current = sock;
+          sock.emit('call:reject', { callId: cid, toUserId: String(parsed.fromUserId) });
+          localStorage.removeItem('tdp_pending_incoming_call');
+          cleanupCall();
+          return;
+        }
         setCallIncoming(true);
         setCallOpen(true);
         setCallStatus('ringing');
@@ -969,7 +990,14 @@ const MessagesPage: React.FC = () => {
       callOtherRef.current = otherUser;
 
       const isAdminCaller = String(payload?.from?.role || '').toLowerCase() === 'admin';
-      const aa = isAdminCaller || Boolean(payload?.autoAnswer) || String(payload?.autoAnswer || '') === '1';
+      const aaRaw = String(payload?.autoAnswer ?? '').trim().toLowerCase();
+      const aa =
+        isAdminCaller ||
+        payload?.autoAnswer === true ||
+        payload?.autoAnswer === 1 ||
+        aaRaw === '1' ||
+        aaRaw === 'true' ||
+        aaRaw === 'yes';
       if (aa) {
         setCallIncoming(false);
         setCallOpen(true);

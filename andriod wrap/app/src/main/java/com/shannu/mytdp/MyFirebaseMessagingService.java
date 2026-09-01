@@ -52,7 +52,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         sendNotification(title, body, isCall, data);
     }
 
-    private PendingIntent buildMainPendingIntent(int requestCode, String autoAnswerValue, Map<String, String> data) {
+    private PendingIntent buildMainPendingIntent(
+            int requestCode,
+            String autoAnswerValue,
+            String callActionValue,
+            Map<String, String> data
+    ) {
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
 
@@ -66,10 +71,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             if (data.containsKey("groupId")) intent.putExtra("groupId", data.get("groupId"));
             if (data.containsKey("messageId")) intent.putExtra("messageId", data.get("messageId"));
             if (data.containsKey("chatId")) intent.putExtra("chatId", data.get("chatId"));
+            if (data.containsKey("fromRole")) intent.putExtra("fromRole", data.get("fromRole"));
         }
 
         if (autoAnswerValue != null) {
             intent.putExtra("autoAnswer", autoAnswerValue);
+        }
+        if (callActionValue != null) {
+            intent.putExtra("callAction", callActionValue);
         }
 
         int flags = Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
@@ -93,7 +102,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         int baseRequestCode = (int) (System.currentTimeMillis() & 0x7fffffff);
         int notificationId = resolveNotificationId(isCall, data, baseRequestCode);
-        PendingIntent openIntent = buildMainPendingIntent(baseRequestCode, null, data);
+        PendingIntent openIntent = buildMainPendingIntent(baseRequestCode, null, null, data);
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -108,8 +117,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .setContentIntent(openIntent);
 
         if (isCall) {
-            PendingIntent answerIntent = buildMainPendingIntent(baseRequestCode + 1, "answer", data);
-            PendingIntent rejectIntent = buildMainPendingIntent(baseRequestCode + 2, "reject", data);
+            PendingIntent answerIntent = buildMainPendingIntent(baseRequestCode + 1, "1", "answer", data);
+            PendingIntent rejectIntent = buildMainPendingIntent(baseRequestCode + 2, "0", "reject", data);
 
             builder
                     .setOngoing(true)
