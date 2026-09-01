@@ -19,8 +19,6 @@ import java.util.Map;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
-    private Map<String, String> lastData;
-
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
         String title = null;
@@ -33,40 +31,55 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
         Map<String, String> data = remoteMessage.getData();
         if (data != null && data.size() > 0) {
-            lastData = data;
             if (title == null) title = data.get("title");
             if (body == null) body = data.get("body");
 
             String type = data.get("type");
-            if (type != null && type.equals("call")) {
+            String scope = data.get("scope");
+            boolean isCall = "call".equals(type);
+
+            if (isCall) {
                 if (title == null || title.trim().isEmpty()) title = "Incoming call";
                 if (body == null || body.trim().isEmpty()) body = "Tap to open";
-                sendNotification(title, body, true);
-                return;
+            } else if (title == null || title.trim().isEmpty()) {
+                title = "community".equals(scope) ? "Community" : "New message";
             }
+
+            if (body == null) body = "";
+
+            // Every push (private/group/community message or call) is sent as a
+            // data-only, high-priority message from the backend so this method
+            // is always invoked here, even while the app is asleep, backgrounded,
+            // or another app is in the foreground - matching WhatsApp-style
+            // delivery instead of relying on the OS's own notification tray
+            // (which bypasses this service and our custom handling once the
+            // app is no longer in the foreground).
+            sendNotification(title, body, isCall, data);
+            return;
         }
 
         if (title == null || title.trim().isEmpty()) title = "Notification";
         if (body == null) body = "";
 
-        sendNotification(title, body, false);
+        sendNotification(title, body, false, data);
     }
 
-    private void sendNotification(String title, String messageBody, boolean isCall) {
+    private void sendNotification(String title, String messageBody, boolean isCall, Map<String, String> data) {
         Intent intent = new Intent(this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        if (lastData != null) {
+        if (data != null) {
             try {
-                if (lastData.containsKey("type")) intent.putExtra("type", lastData.get("type"));
-                if (lastData.containsKey("scope")) intent.putExtra("scope", lastData.get("scope"));
-                if (lastData.containsKey("fromUserId")) intent.putExtra("fromUserId", lastData.get("fromUserId"));
-                if (lastData.containsKey("toUserId")) intent.putExtra("toUserId", lastData.get("toUserId"));
-                if (lastData.containsKey("callId")) intent.putExtra("callId", lastData.get("callId"));
-                if (lastData.containsKey("kind")) intent.putExtra("kind", lastData.get("kind"));
-                if (lastData.containsKey("groupId")) intent.putExtra("groupId", lastData.get("groupId"));
-                if (lastData.containsKey("messageId")) intent.putExtra("messageId", lastData.get("messageId"));
-                if (lastData.containsKey("autoAnswer")) intent.putExtra("autoAnswer", lastData.get("autoAnswer"));
+                if (data.containsKey("type")) intent.putExtra("type", data.get("type"));
+                if (data.containsKey("scope")) intent.putExtra("scope", data.get("scope"));
+                if (data.containsKey("fromUserId")) intent.putExtra("fromUserId", data.get("fromUserId"));
+                if (data.containsKey("toUserId")) intent.putExtra("toUserId", data.get("toUserId"));
+                if (data.containsKey("callId")) intent.putExtra("callId", data.get("callId"));
+                if (data.containsKey("kind")) intent.putExtra("kind", data.get("kind"));
+                if (data.containsKey("groupId")) intent.putExtra("groupId", data.get("groupId"));
+                if (data.containsKey("messageId")) intent.putExtra("messageId", data.get("messageId"));
+                if (data.containsKey("autoAnswer")) intent.putExtra("autoAnswer", data.get("autoAnswer"));
+                if (data.containsKey("fromRole")) intent.putExtra("fromRole", data.get("fromRole"));
             } catch (Exception ignored) {
             }
         }
@@ -81,8 +94,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         int requestCode = (int) (System.currentTimeMillis() & 0xfffffff);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, requestCode, intent, flags);
 
-        String channelId = isCall ? "calls_channel" : "default_channel";
-        String channelName = isCall ? "Calls" : "General";
+        String channelId = isCall ? "calls_channel" : "messages_channel";
+        String channelName = isCall ? "Calls" : "Messages";
 
         Uri defaultSoundUri = RingtoneManager.getDefaultUri(
                 isCall ? RingtoneManager.TYPE_RINGTONE : RingtoneManager.TYPE_NOTIFICATION
@@ -95,16 +108,26 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setContentText(messageBody)
                         .setAutoCancel(true)
                         .setSound(defaultSoundUri)
-                        .setPriority(isCall ? NotificationCompat.PRIORITY_MAX : NotificationCompat.PRIORITY_HIGH)
+                        .setPriority(NotificationCompat.PRIORITY_MAX)
                         .setCategory(isCall ? NotificationCompat.CATEGORY_CALL : NotificationCompat.CATEGORY_MESSAGE)
+                        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                         .setContentIntent(pendingIntent);
+
+        if (isCall) {
+            // Bring the call to the foreground immediately - ringing over the
+            // lock screen and over whatever app is currently open - the same
+            // way WhatsApp surfaces incoming calls instead of waiting for the
+            // user to pull down the notification shade.
+            notificationBuilder
+                    .setOngoing(true)
+                    .setFullScreenIntent(pendingIntent, true);
+        }
 
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            int importance = isCall ? NotificationManager.IMPORTANCE_HIGH : NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel(channelId, channelName, importance);
+            NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
 
             try {
                 AudioAttributes attrs = new AudioAttributes.Builder()
@@ -113,6 +136,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .build();
                 channel.setSound(defaultSoundUri, attrs);
                 channel.enableVibration(true);
+                channel.setBypassDnd(isCall);
+                channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
             } catch (Exception ignored) {
             }
 

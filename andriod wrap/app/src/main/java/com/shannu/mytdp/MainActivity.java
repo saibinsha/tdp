@@ -336,6 +336,30 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // Incoming calls must surface immediately over the lock screen and over
+    // whatever app is currently in the foreground - the same way WhatsApp
+    // rings - instead of waiting for the notification to be manually opened.
+    private void showOverLockScreenIfIncomingCall(Intent intent) {
+        if (intent == null) return;
+        if (!"call".equals(intent.getStringExtra("type"))) return;
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                setShowWhenLocked(true);
+                setTurnScreenOn(true);
+            } else {
+                getWindow().addFlags(
+                        android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                                android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON |
+                                android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON |
+                                android.view.WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+                );
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to apply lock screen call flags", e);
+        }
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -346,6 +370,7 @@ public class MainActivity extends AppCompatActivity {
             handleIntentData(getIntent());
             
             capturePushFromIntent(getIntent());
+            showOverLockScreenIfIncomingCall(getIntent());
 
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
                 getWindow().getDecorView().setSystemUiVisibility(
@@ -487,6 +512,7 @@ public class MainActivity extends AppCompatActivity {
         setIntent(intent);
         handleIntentData(intent);
         capturePushFromIntent(intent);
+        showOverLockScreenIfIncomingCall(intent);
         if (webView != null) {
             webView.post(() -> {
                 if (pendingPushJson == null) return;

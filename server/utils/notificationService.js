@@ -85,27 +85,24 @@ async function sendPushNotification(userToken, title, body, data = {}) {
     return acc;
   }, {});
 
-  const isCall = String(normalizedData?.type || '') === 'call';
+  if (title != null) normalizedData.title = String(title);
+  if (body != null) normalizedData.body = String(body);
 
-  // For calls we send a data-only message so Android always receives it in
-  // FirebaseMessagingService.onMessageReceived (system-handled notification
-  // payload can bypass the service and lose our custom ringtone + deep link).
-  const message = isCall
-    ? {
-        token: String(userToken),
-        data: normalizedData,
-        android: {
-          priority: 'high',
-        },
-      }
-    : {
-        token: String(userToken),
-        notification: {
-          title: String(title || ''),
-          body: String(body || ''),
-        },
-        data: normalizedData,
-      };
+  // Always send a data-only, high-priority message so Android's
+  // FirebaseMessagingService.onMessageReceived is invoked in every app
+  // state (foreground, background, or fully killed/"asleep"). A
+  // notification-payload message is auto-displayed by the OS and skips our
+  // service entirely once the app is backgrounded, which drops our custom
+  // channel, sound, and deep-link handling for messages, calls, and
+  // private/group/community pushes alike (the WhatsApp-style delivery this
+  // fixes).
+  const message = {
+    token: String(userToken),
+    data: normalizedData,
+    android: {
+      priority: 'high',
+    },
+  };
 
   const messageId = await admin.messaging().send(message);
   return { ok: true, messageId };
