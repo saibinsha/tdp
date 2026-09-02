@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TDP</string>
+    <string name="default_web_client_id">941620869591-9ckbl2b83fguncd8t98cvpqspkisni98.apps.googleusercontent.com</string>
+
+    <string name="title_home">Home</string>
+    <string name="title_leaders">Leaders</string>
+    <string name="title_messages">Messages</string>
+    <string name="title_profile">Profile</string>
+
+    <string name="action_google_sign_in">Continue with Google</string>
+    <string name="action_login">Login</string>
+    <string name="action_register">Create account</string>
+    <string name="action_logout">Log out</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
+    <string name="hint_name">Full name</string>
+    <string name="hint_message">Message</string>
+
+    <string name="call_audio">Audio call</string>
+    <string name="call_video">Video call</string>
+    <string name="call_accept">Accept</string>
+    <string name="call_decline">Decline</string>
+    <string name="call_end">End call</string>
+    <string name="call_connecting">Connecting…</string>
+    <string name="call_ringing">Ringing…</string>
+    <string name="call_connected">Connected</string>
+</resources>
