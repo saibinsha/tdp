@@ -209,16 +209,18 @@ public class MainActivity extends AppCompatActivity {
     private class WebAppBridge {
         @JavascriptInterface
         public void googleSignIn() {
-            // Open Google Sign-In in external browser
+            // Show the native Google Sign-In account picker as an in-app popup
+            // (Play Services bottom-sheet/dialog) instead of leaving the app.
+            // The resulting ID token is handed back to the WebView via
+            // window.onNativeGoogleSignIn / window.onNativeGoogleSignInError,
+            // which src/lib/api.ts is already listening for.
             runOnUiThread(() -> {
                 try {
-                    String googleSignInUrl = "https://telugudeshamparty.onrender.com/api/auth/google";
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(googleSignInUrl));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    Log.i(TAG, "Opening Google Sign-In in external browser");
+                    Log.i(TAG, "Starting native Google Sign-In popup");
+                    startGoogleSignIn();
                 } catch (Exception e) {
-                    Log.e(TAG, "Failed to open browser for Google Sign-In", e);
+                    Log.e(TAG, "Failed to start native Google Sign-In", e);
+                    sendGoogleSignInErrorToWeb("Failed to start Google sign-in. Please try again.");
                 }
             });
         }
