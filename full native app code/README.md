@@ -56,7 +56,7 @@ screens following the same pattern as `ui/leaders` or `ui/home`.
 ## Project layout
 
 ```
-native app/
+full native app code/
   app/src/main/java/com/shannu/tdpnative/
     auth/          LoginActivity, AuthRepository
     call/          CallActivity (WebRTC), CallForegroundService
@@ -73,13 +73,13 @@ native app/
 
 ## Building in Android Studio
 
-1. Open the `native app` folder as a project (not the repo root).
+1. Open the `full native app code` folder as a project (not the repo root).
 2. Replace `google-services.json.sample` with your **real**
    `google-services.json` from the same Firebase project used by the
    WebView wrapper app (`tdp2-4d674`), renamed to `google-services.json`, in
-   `native app/app/`.
+   `full native app code/app/`.
 3. (Optional) override build-time defaults instead of editing
-   `app/build.gradle` directly, by adding to `native app/gradle.properties`:
+   `app/build.gradle` directly, by adding to `full native app code/gradle.properties`:
    ```properties
    apiBaseUrl=https://mytelugudeshamparty.onrender.com
    webClientId=<your-web-oauth-client-id>.apps.googleusercontent.com
