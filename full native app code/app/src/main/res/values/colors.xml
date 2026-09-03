@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TDP party brand colors (yellow/red), matching the website theme. -->
+    <color name="tdp_yellow">#FFC72C</color>
+    <color name="tdp_yellow_dark">#E0A800</color>
+    <color name="tdp_red">#C8102E</color>
+    <color name="tdp_black">#1A1A1A</color>
+    <color name="tdp_white">#FFFFFF</color>
+    <color name="tdp_surface">#F7F7F7</color>
+    <color name="tdp_online">#22C55E</color>
+</resources>

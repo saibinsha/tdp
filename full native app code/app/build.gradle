@@ -1,0 +1,95 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.google.services)
+}
+
+android {
+    namespace 'com.shannu.tdpnative'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.shannu.tdpnative"
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // Same backend + database as the website / WebView wrapper app.
+        // Override in gradle.properties (or -PapiBaseUrl=... / -PwebClientId=...)
+        // without editing this file if you ever need a different environment.
+        buildConfigField "String", "API_BASE_URL", "\"${project.findProperty('apiBaseUrl') ?: 'https://mytelugudeshamparty.onrender.com'}\""
+        buildConfigField "String", "WEB_CLIENT_ID", "\"${project.findProperty('webClientId') ?: '941620869591-9ckbl2b83fguncd8t98cvpqspkisni98.apps.googleusercontent.com'}\""
+        buildConfigField "String", "TURN_URLS", "\"${project.findProperty('turnUrls') ?: 'turn:global.turn.twilio.com:3478?transport=udp,turn:global.turn.twilio.com:3478?transport=tcp,turn:global.turn.twilio.com:443?transport=tcp'}\""
+        buildConfigField "String", "TURN_USERNAME", "\"${project.findProperty('turnUsername') ?: 'dd9209a222191273fa700bc65cfec958ff6cb6048bb7355c099f196ffc792bac'}\""
+        buildConfigField "String", "TURN_CREDENTIAL", "\"${project.findProperty('turnCredential') ?: '0VpG7mY0zmjHIFzPVCg0RU6doTDq/EsZo3c4MLv+DBM='}\""
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            // Allows testing against a local dev server via 10.0.2.2 if desired.
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+
+    buildFeatures {
+        viewBinding true
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation libs.core.ktx
+    implementation libs.appcompat
+    implementation libs.material
+    implementation libs.activity
+    implementation libs.constraintlayout
+    implementation libs.recyclerview
+    implementation libs.cardview
+    implementation libs.lifecycle.runtime.ktx
+    implementation libs.swiperefreshlayout
+
+    implementation libs.retrofit.core
+    implementation libs.retrofit.gson
+    implementation libs.okhttp
+    implementation libs.okhttp.logging
+    implementation libs.gson
+
+    implementation libs.kotlinx.coroutines.android
+
+    implementation libs.glide
+
+    // Realtime chat + call signaling - talks to the same server/sockets/*.js
+    // Socket.IO namespace/events used by the website (server/sockets/chat.js).
+    implementation libs.socketio.client
+
+    // Native (in-app popup) Google Sign-In - posts the ID token to the same
+    // POST /api/auth/google/native endpoint the WebView wrapper app uses.
+    implementation libs.play.services.auth
+
+    // WebRTC for native audio/video calls, using the same signaling protocol
+    // (call:offer / call:answer / call:ice / call:accept) as src/components/party/MessagesPage.tsx.
+    implementation libs.webrtc
+
+    // Firebase Cloud Messaging - same Firebase project as the WebView wrapper app.
+    implementation platform('com.google.firebase:firebase-bom:33.1.0')
+    implementation 'com.google.firebase:firebase-messaging'
+
+    testImplementation libs.junit
+    androidTestImplementation libs.ext.junit
+    androidTestImplementation libs.espresso.core
+}

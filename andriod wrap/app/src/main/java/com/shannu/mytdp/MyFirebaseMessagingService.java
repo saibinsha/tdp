@@ -78,6 +78,14 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             flags = PendingIntent.FLAG_UPDATE_CURRENT;
         }
 
+        if (isCall) {
+            // Wake the screen and bring the app to the front immediately (like a
+            // real incoming call), instead of waiting for the user to pull down
+            // the notification shade - this avoids the caller's ICE negotiation
+            // timing out while the callee's phone is still locked.
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        }
+
         int requestCode = (int) (System.currentTimeMillis() & 0xfffffff);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, requestCode, intent, flags);
 
@@ -98,6 +106,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setPriority(isCall ? NotificationCompat.PRIORITY_MAX : NotificationCompat.PRIORITY_HIGH)
                         .setCategory(isCall ? NotificationCompat.CATEGORY_CALL : NotificationCompat.CATEGORY_MESSAGE)
                         .setContentIntent(pendingIntent);
+
+        if (isCall) {
+            // Show the incoming-call UI immediately over the lock screen, like
+            // a real phone call, instead of only appearing in the shade.
+            notificationBuilder.setFullScreenIntent(pendingIntent, true);
+            notificationBuilder.setOngoing(true);
+        }
 
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
